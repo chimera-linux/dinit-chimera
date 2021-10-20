@@ -3,7 +3,7 @@ SYSCONFDIR ?= /etc
 BINDIR     ?= $(PREFIX)/bin
 DATADIR    ?= $(PREFIX)/share
 MANDIR     ?= $(DATADIR)/man/man8
-DINITDIR   ?= $(SYSCONFDIR)/etc/dinit.d
+DINITDIR   ?= $(SYSCONFDIR)/dinit.d
 
 BIN_PROGRAMS = modules-load
 
