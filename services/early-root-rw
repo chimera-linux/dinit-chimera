@@ -1,0 +1,11 @@
+# Remount root filesystem as r/w
+
+type       = scripted
+command    = /usr/bin/mount -n -o remount,rw /
+restart    = false
+options    = starts-rwfs
+logfile    = /run/dinit-root-rw.log
+depends-on = early-filesystems
+depends-on = early-udevd
+waits-for  = early-hwclock
+waits-for  = early-root-fsck

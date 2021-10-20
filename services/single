@@ -1,0 +1,7 @@
+# Single-user mode, it simply starts a shell and resumes boot on exit
+
+type     = process
+command  = /bin/sh
+restart  = false
+options  = shares-console
+chain-to = boot

@@ -1,0 +1,8 @@
+# Various startup operations
+
+type         = scripted
+command      = /etc/dinit.d/early-scripts/rcboot.sh
+stop-command = /etc/dinit.d/early-scripts/rcboot-stop.sh
+restart      = false
+logfile      = /var/log/dinit-rcboot.log
+depends-on   = early-aux-filesystems

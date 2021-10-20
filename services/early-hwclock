@@ -1,0 +1,9 @@
+# Set system time from hardware clock
+
+type       = scripted
+logfile    = /run/dinit-hwclock.log
+command    = /etc/dinit.d/early-scripts/hwclock.sh
+restart    = false
+depends-on = early-udevd
+depends-on = early-filesystems
+waits-for  = early-console

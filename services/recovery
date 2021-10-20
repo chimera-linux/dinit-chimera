@@ -1,0 +1,6 @@
+# This service is started if boot fails, it will run
+# sulogin, to prompt the root password and invoke a shell
+
+type    = process
+command = /usr/bin/sulogin
+options = runs-on-console

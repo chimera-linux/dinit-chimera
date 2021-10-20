@@ -1,0 +1,7 @@
+# Some kernel modules must be loaded before starting udev(7)
+# Load them by looking at the output of `kmod static-nodes`
+
+type       = scripted
+command    = /etc/dinit.d/early-scripts/static-devnodes.sh
+restart    = false
+depends-on = early-filesystems

@@ -1,0 +1,7 @@
+# Wait until all queued udev events have been processed
+
+type      = scripted
+command   = /usr/bin/udevadm settle
+restart   = false
+waits-for = early-udevd
+waits-for = early-udev-trigger
