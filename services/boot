@@ -5,5 +5,5 @@
 # - starting all services in the boot.d directory
 #
 
-depends-ms  = early-static-devnodes
+depends-on  = early-static-devnodes
 waits-for.d = boot.d
