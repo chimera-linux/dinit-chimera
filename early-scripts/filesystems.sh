@@ -23,19 +23,5 @@ mountpoint -q /sys/kernel/security || mount -n -t securityfs securityfs /sys/ker
 
 is_container && exit 0
 
-# cgroup mounts
-_cgroupv1="/sys/fs/cgroup"
-_cgroupv2="${_cgroupv1}/unified"
-
-# cgroup v1
-mountpoint -q "$_cgroupv1" || mount -o mode=0755 -t tmpfs cgroup "$_cgroupv1"
-while read -r _subsys_name _hierarchy _num_cgroups _enabled; do
-    [ "$_enabled" = "1" ] || continue
-    _controller="${_cgroupv1}/${_subsys_name}"
-    mkdir -p "$_controller"
-    mountpoint -q "$_controller" || mount -t cgroup -o "$_subsys_name" cgroup "$_controller"
-done < /proc/cgroups
-
-# cgroup v2
-mkdir -p "$_cgroupv2"
-mountpoint -q "$_cgroupv2" || mount -t cgroup2 -o nsdelegate cgroup2 "$_cgroupv2"
+mkdir -p "/sys/fs/cgroup"
+mountpoint -q "/sys/fs/cgroup" || mount -t cgroup2 -o nsdelegate cgroup2 "/sys/fs/cgroup"
