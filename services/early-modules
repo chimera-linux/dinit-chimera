@@ -1,6 +1,6 @@
 # Load kernel modules from /etc/modules
 
 type       = scripted
-command    = /etc/dinit.d/early-scripts/modules.sh
+command    = /usr/libexec/dinit/early/modules.sh
 restart    = false
 depends-on = early-static-devnodes

@@ -1,8 +1,11 @@
 PREFIX     ?= /usr
 SYSCONFDIR ?= /etc
 BINDIR     ?= $(PREFIX)/bin
+LIBDIR     ?= $(PREFIX)/lib
+LIBEXECDIR ?= $(PREFIX)/libexec
 DATADIR    ?= $(PREFIX)/share
 MANDIR     ?= $(DATADIR)/man/man8
+SDINITDIR  ?= $(LIBDIR)/dinit.d
 DINITDIR   ?= $(SYSCONFDIR)/dinit.d
 
 BIN_PROGRAMS = modules-load
@@ -11,10 +14,7 @@ MANPAGES = modules-load.8
 
 CONF_FILES = rc.conf
 
-SERVICES = \
-	agetty-hvc0 \
-	agetty-tty1 \
-	agetty-tty2 \
+SYSTEM_SERVICES = \
 	boot \
 	early-aux-filesystems \
 	early-aux-fsck \
@@ -29,10 +29,15 @@ SERVICES = \
 	early-udev-settle \
 	early-udev-trigger \
 	early-udevd	\
-	late-filesystems \
 	login-ready \
 	recovery \
 	single
+
+SERVICES = \
+	agetty-hvc0 \
+	agetty-tty1 \
+	agetty-tty2 \
+	late-filesystems
 
 EARLY_SCRIPTS = \
 	aux-filesystems \
@@ -57,8 +62,8 @@ install:
 	install -d $(DESTDIR)$(DATADIR)
 	install -d $(DESTDIR)$(SYSCONFDIR)
 	install -d $(DESTDIR)$(MANDIR)
+	install -d $(DESTDIR)$(LIBBEXECDIR)/dinit/early
 	install -d $(DESTDIR)$(DINITDIR)
-	install -d $(DESTDIR)$(DINITDIR)/early-scripts
 	install -d $(DESTDIR)$(DINITDIR)/scripts
 	install -d $(DESTDIR)$(DINITDIR)/boot.d
 	# boot.d placeholder
@@ -70,7 +75,7 @@ install:
 	# early scripts
 	for script in $(EARLY_SCRIPTS); do \
 		install -m 755 early-scripts/$$script.sh \
-			$(DESTDIR)$(DINITDIR)/early-scripts; \
+			$(DESTDIR)$(LIBBEXECDIR)/dinit/early; \
 	done
 	# regular scripts
 	for script in $(LATE_SCRIPTS); do \
@@ -83,6 +88,10 @@ install:
 	# manpages
 	for man in $(MANPAGES); do \
 		install -m 644 man/$$man $(DESTDIR)$(MANDIR); \
+	done
+	# system services
+	for srv in $(SYSTEM_SERVICES); do \
+		install -m 644 services/$$srv $(DESTDIR)$(SDINITDIR); \
 	done
 	# services
 	for srv in $(SERVICES); do \

@@ -2,7 +2,7 @@
 
 type       = scripted
 logfile    = /run/dinit-console.log
-command    = /etc/dinit.d/early-scripts/console.sh
+command    = /usr/libexec/dinit/early/console.sh
 restart    = false
 depends-on = early-udevd
 depends-on = early-filesystems

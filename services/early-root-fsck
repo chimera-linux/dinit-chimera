@@ -1,7 +1,7 @@
 # Check the root filesystem, interruptible with ^C
 
 type          = scripted
-command       = /etc/dinit.d/early-scripts/root-fsck.sh
+command       = /usr/libexec/dinit/early/root-fsck.sh
 restart       = false
 options       = starts-on-console pass-cs-fd start-interruptible skippable
 start-timeout = 0 # unlimited

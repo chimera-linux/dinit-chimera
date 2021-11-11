@@ -6,4 +6,6 @@
 #
 
 depends-on  = early-static-devnodes
-waits-for.d = boot.d
+depends-on  = login-ready
+
+waits-for.d = /etc/dinit.d/boot.d
