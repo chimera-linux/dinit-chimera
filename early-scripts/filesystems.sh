@@ -1,6 +1,6 @@
 #!/bin/sh
 
-. /etc/dinit.d/early-scripts/common.sh
+. /usr/libexec/dinit/early/common.sh
 
 echo "Remounting rootfs read-only..."
 mount -o remount,ro / || exit 1

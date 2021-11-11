@@ -1,6 +1,6 @@
 #!/bin/sh
 
-. /etc/dinit.d/early-scripts/common.sh
+. /usr/libexec/dinit/early/common.sh
 
 # no modules support
 [ -e /proc/modules ] || exit 0
