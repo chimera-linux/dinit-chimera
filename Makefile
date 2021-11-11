@@ -63,6 +63,7 @@ install:
 	install -d $(DESTDIR)$(SYSCONFDIR)
 	install -d $(DESTDIR)$(MANDIR)
 	install -d $(DESTDIR)$(LIBBEXECDIR)/dinit/early
+	install -d $(DESTDIR)$(SDINITDIR)
 	install -d $(DESTDIR)$(DINITDIR)
 	install -d $(DESTDIR)$(DINITDIR)/scripts
 	install -d $(DESTDIR)$(DINITDIR)/boot.d
