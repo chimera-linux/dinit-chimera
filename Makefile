@@ -62,7 +62,7 @@ install:
 	install -d $(DESTDIR)$(DATADIR)
 	install -d $(DESTDIR)$(SYSCONFDIR)
 	install -d $(DESTDIR)$(MANDIR)
-	install -d $(DESTDIR)$(LIBBEXECDIR)/dinit/early
+	install -d $(DESTDIR)$(LIBEXECDIR)/dinit/early
 	install -d $(DESTDIR)$(SDINITDIR)
 	install -d $(DESTDIR)$(DINITDIR)
 	install -d $(DESTDIR)$(DINITDIR)/scripts
@@ -76,7 +76,7 @@ install:
 	# early scripts
 	for script in $(EARLY_SCRIPTS); do \
 		install -m 755 early-scripts/$$script.sh \
-			$(DESTDIR)$(LIBBEXECDIR)/dinit/early; \
+			$(DESTDIR)$(LIBEXECDIR)/dinit/early; \
 	done
 	# regular scripts
 	for script in $(LATE_SCRIPTS); do \
