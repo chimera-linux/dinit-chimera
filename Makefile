@@ -67,8 +67,10 @@ install:
 	install -d $(DESTDIR)$(DINITDIR)
 	install -d $(DESTDIR)$(DINITDIR)/scripts
 	install -d $(DESTDIR)$(DINITDIR)/boot.d
-	# boot.d placeholder
+	install -d $(DESTDIR)$(DINITDIR)/login.d
+	# *.d placeholders
 	touch $(DESTDIR)$(DINITDIR)/boot.d/.empty
+	touch $(DESTDIR)$(DINITDIR)/login.d/.empty
 	# config files
 	for conf in $(CONF_FILES); do \
 		install -m 644 etc/$$conf $(DESTDIR)$(SYSCONFDIR); \

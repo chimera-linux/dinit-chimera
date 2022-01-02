@@ -1,7 +1,8 @@
 # Virtual service run before login is enabled
 
-type       = internal
-restart    = false
-options    = runs-on-console
-depends-on = early-rcboot
-waits-for  = early-udevd
+type        = internal
+restart     = false
+options     = runs-on-console
+depends-on  = early-rcboot
+waits-for   = early-udevd
+waits-for.d = /etc/dinit.d/login.d
