@@ -1,0 +1,6 @@
+# Virtual service that runs startup services after early boot
+
+type        = internal
+restart     = false
+depends-on  = early
+waits-for.d = /etc/dinit.d/init.d

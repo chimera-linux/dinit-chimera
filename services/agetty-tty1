@@ -1,7 +1,7 @@
 type            = process
 command         = /usr/bin/agetty --noclear tty1 38400 linux
 restart         = true
-depends-on      = login-ready
+depends-on      = login
 termsignal      = HUP
 smooth-recovery = true
 inittab-id      = 1

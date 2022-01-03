@@ -3,6 +3,5 @@
 type        = internal
 restart     = false
 options     = runs-on-console
-depends-on  = early-rcboot
-waits-for   = early-udevd
+depends-on  = init
 waits-for.d = /etc/dinit.d/login.d

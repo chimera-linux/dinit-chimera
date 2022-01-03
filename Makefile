@@ -14,6 +14,13 @@ MANPAGES = modules-load.8
 
 CONF_FILES = rc.conf
 
+TARGETS = \
+	early \
+	init \
+	network \
+	login \
+	boot
+
 SYSTEM_SERVICES = \
 	boot \
 	early-aux-filesystems \
@@ -22,14 +29,16 @@ SYSTEM_SERVICES = \
 	early-filesystems \
 	early-hwclock \
 	early-modules \
-	early-rcboot \
+	early \
 	early-root-fsck \
 	early-root-rw \
 	early-static-devnodes \
 	early-udev-settle \
 	early-udev-trigger \
 	early-udevd	\
-	login-ready \
+	init \
+	login \
+	network \
 	recovery \
 	single
 
@@ -66,11 +75,11 @@ install:
 	install -d $(DESTDIR)$(SDINITDIR)
 	install -d $(DESTDIR)$(DINITDIR)
 	install -d $(DESTDIR)$(DINITDIR)/scripts
-	install -d $(DESTDIR)$(DINITDIR)/boot.d
-	install -d $(DESTDIR)$(DINITDIR)/login.d
-	# *.d placeholders
-	touch $(DESTDIR)$(DINITDIR)/boot.d/.empty
-	touch $(DESTDIR)$(DINITDIR)/login.d/.empty
+	# service targets
+	for target in $(TARGETS); do \
+		install -d $(DESTDIR)$(DINITDIR)/$$target.d; \
+		touch $(DESTDIR)$(DINITDIR)/$$target.d/.empty; \
+	done
 	# config files
 	for conf in $(CONF_FILES); do \
 		install -m 644 etc/$$conf $(DESTDIR)$(SYSCONFDIR); \
