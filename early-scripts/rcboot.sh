@@ -47,6 +47,11 @@ if [ -x /usr/bin/sysctl ]; then
     sysctl -p /etc/sysctl.conf
 fi
 
+echo "Sanitizing temporary files..."
+
+# ensure X11/xwayland can start rootless
+install -d -m 1777 -o root -g root /tmp/.X11-unix /tmp/.ICE-unix
+
 echo "Invoking /etc/rc.local..."
 
 [ -x /etc/rc.local ] && /etc/rc.local
