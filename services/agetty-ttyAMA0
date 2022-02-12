@@ -1,8 +1,8 @@
 type            = process
-command         = /usr/bin/agetty -L hvc0 9600 vt100
+command         = /usr/bin/agetty -L -8 ttyAMA0 115200 vt100
 restart         = true
 depends-on      = login
 termsignal      = HUP
 smooth-recovery = true
-inittab-id      = hvc0
-inittab-line    = hvc0
+inittab-id      = AMA0
+inittab-line    = ttyAMA0

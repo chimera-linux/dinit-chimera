@@ -43,9 +43,18 @@ SYSTEM_SERVICES = \
 	single
 
 SERVICES = \
+	agetty-console \
 	agetty-hvc0 \
+	agetty-hvsi0 \
 	agetty-tty1 \
 	agetty-tty2 \
+	agetty-tty3 \
+	agetty-tty4 \
+	agetty-tty5 \
+	agetty-tty6 \
+	agetty-ttyAMA0 \
+	agetty-ttyS0 \
+	agetty-ttyUSB0 \
 	late-filesystems
 
 EARLY_SCRIPTS = \
