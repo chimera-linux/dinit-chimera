@@ -17,7 +17,7 @@ fi
 
 if [ -e /etc/crypttab ]; then
     echo "Activating encrypted devices..."
-    awk -f /etc/runit/crypt.awk /etc/crypttab
+    awk -f /usr/libexec/dinit/early/crypt.awk /etc/crypttab
 
     if [ -x /usr/bin/vgchange ]; then
         echo "Activating LVM devices for dm-crypt..."

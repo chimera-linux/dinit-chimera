@@ -97,6 +97,7 @@ install:
 		install -m 755 early-scripts/$$script.sh \
 			$(DESTDIR)$(LIBEXECDIR)/dinit/early; \
 	done
+	install -m 755 early-scripts/crypt.awk $(DESTDIR)$(LIBEXECDIR)/dinit/early
 	# regular scripts
 	for script in $(LATE_SCRIPTS); do \
 		install -m 755 scripts/$$script.sh $(DESTDIR)$(DINITDIR)/scripts; \
