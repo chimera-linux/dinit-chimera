@@ -15,7 +15,6 @@ MANPAGES = modules-load.8
 CONF_FILES = rc.conf
 
 TARGETS = \
-	early \
 	init \
 	network \
 	login \
