@@ -53,8 +53,7 @@ SERVICES = \
 	agetty-tty6 \
 	agetty-ttyAMA0 \
 	agetty-ttyS0 \
-	agetty-ttyUSB0 \
-	late-filesystems
+	agetty-ttyUSB0
 
 EARLY_SCRIPTS = \
 	aux-filesystems \
@@ -67,9 +66,6 @@ EARLY_SCRIPTS = \
 	rcboot \
 	root-fsck \
 	static-devnodes
-
-LATE_SCRIPTS = \
-	late-filesystems
 
 all:
 	@echo "Nothing to be done here."
@@ -98,10 +94,6 @@ install:
 			$(DESTDIR)$(LIBEXECDIR)/dinit/early; \
 	done
 	install -m 755 early-scripts/crypt.awk $(DESTDIR)$(LIBEXECDIR)/dinit/early
-	# regular scripts
-	for script in $(LATE_SCRIPTS); do \
-		install -m 755 scripts/$$script.sh $(DESTDIR)$(DINITDIR)/scripts; \
-	done
 	# programs
 	for prog in $(BIN_PROGRAMS); do \
 		install -m 755 bin/$$prog $(DESTDIR)$(BINDIR); \
