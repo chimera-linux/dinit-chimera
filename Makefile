@@ -71,13 +71,13 @@ EARLY_SCRIPTS = \
 	root-fsck \
 	static-devnodes
 
-all: seedrng
+all: bin/seedrng
 
-seedrng:
-	$(CC) $(EXTRA_CFLAGS) $(CFLAGS) $(LDFLAGS) seedrng.c -o seedrng
+bin/seedrng:
+	$(CC) $(EXTRA_CFLAGS) $(CFLAGS) $(LDFLAGS) seedrng.c -o bin/seedrng
 
 clean:
-	rm -f seedrng
+	rm -f bin/seedrng
 
 install:
 	install -d $(DESTDIR)$(BINDIR)
