@@ -11,7 +11,7 @@ SDINITDIR  ?= $(LIBDIR)/dinit.d
 DINITDIR   ?= $(SYSCONFDIR)/dinit.d
 EXTRA_CFLAGS = -Wall -Wextra
 
-BIN_PROGRAMS = modules-load
+BIN_PROGRAMS = modules-load seedrng
 
 MANPAGES = modules-load.8
 
