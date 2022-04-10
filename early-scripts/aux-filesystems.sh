@@ -1,8 +1,16 @@
 #!/bin/sh
 
+# container environment
+[ -z "${container+x}" ] || exit 0
+
 if [ -x /usr/bin/dmraid ]; then
     echo "Activating dmraid devices..."
     dmraid -i -ay
+fi
+
+if [ -x /usr/bin/mdadm ]; then
+    echo "Activating software RAID arrays..."
+    mdadm -As
 fi
 
 if [ -x /usr/bin/btrfs ]; then

@@ -1,7 +1,5 @@
 #!/bin/sh
 
-. /usr/libexec/dinit/early/common.sh
-
 echo "Remounting rootfs read-only..."
 mount -o remount,ro / || exit 1
 
@@ -21,7 +19,12 @@ mountpoint -q /dev/pts || mount -o mode=0620,gid=5,nosuid,noexec -n -t devpts de
 mountpoint -q /dev/shm || mount -o mode=1777,nosuid,nodev -n -t tmpfs shm /dev/shm
 mountpoint -q /sys/kernel/security || mount -n -t securityfs securityfs /sys/kernel/security
 
-is_container && exit 0
+if [ -d /sys/firmware/efi/efivars ]; then
+    mountpoint -q /sys/firmware/efi/efivars || mount -o nosuid,noexec,nodev -t efivarfs efivarfs /sys/firmware/efi/efivars
+fi
+
+# container environment
+[ -z "${container+x}" ] || exit 0
 
 mkdir -p "/sys/fs/cgroup"
 mountpoint -q "/sys/fs/cgroup" || mount -t cgroup2 -o nsdelegate cgroup2 "/sys/fs/cgroup"

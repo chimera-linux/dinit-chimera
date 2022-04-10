@@ -1,12 +1,10 @@
 #!/bin/sh
 
-. /usr/libexec/dinit/early/common.sh
-
 . /etc/rc.conf
 
-if ! is_container; then
-    echo "Initializing random seed..."
-    cp /var/lib/random-seed /dev/urandom >/dev/null 2>&1 || true
+if [ -z "${container+x}" ]; then
+    echo "Seeding random number generator..."
+    seedrng || true
 fi
 
 echo "Setting up loopback interface..."

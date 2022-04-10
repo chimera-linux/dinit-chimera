@@ -10,4 +10,5 @@ Code adapted from `void-runit`:
 
 * `crypt.awk`
 * `modules-load`
+* `seedrng.c`
 * minor pieces of early oneshots

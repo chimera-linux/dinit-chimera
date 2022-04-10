@@ -2,6 +2,7 @@
 
 type          = scripted
 command       = /usr/libexec/dinit/early/aux-filesystems.sh
+stop-command  = /usr/libexec/dinit/early/aux-filesystems-stop.sh
 restart       = false
 logfile       = /var/log/dinit-filesystems.log
 options       = start-interruptible

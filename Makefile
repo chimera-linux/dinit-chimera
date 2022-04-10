@@ -1,3 +1,5 @@
+CC         ?= cc
+CFLAGS     ?= -O2
 PREFIX     ?= /usr
 SYSCONFDIR ?= /etc
 BINDIR     ?= $(PREFIX)/bin
@@ -7,6 +9,7 @@ DATADIR    ?= $(PREFIX)/share
 MANDIR     ?= $(DATADIR)/man/man8
 SDINITDIR  ?= $(LIBDIR)/dinit.d
 DINITDIR   ?= $(SYSCONFDIR)/dinit.d
+EXTRA_CFLAGS = -Wall -Wextra
 
 BIN_PROGRAMS = modules-load
 
@@ -57,18 +60,24 @@ SERVICES = \
 
 EARLY_SCRIPTS = \
 	aux-filesystems \
-	common \
+	aux-filesystems-stop \
 	console \
 	filesystems \
 	hwclock \
+	hwclock-stop \
 	modules \
 	rcboot-stop \
 	rcboot \
 	root-fsck \
 	static-devnodes
 
-all:
-	@echo "Nothing to be done here."
+all: seedrng
+
+seedrng:
+	$(CC) $(EXTRA_CFLAGS) $(CFLAGS) $(LDFLAGS) seedrng.c -o seedrng
+
+clean:
+	rm -f seedrng
 
 install:
 	install -d $(DESTDIR)$(BINDIR)

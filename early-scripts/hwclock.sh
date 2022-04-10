@@ -1,8 +1,7 @@
 #!/bin/sh
 
-. /usr/libexec/dinit/early/common.sh
-
-is_container && exit 0
+# container environment
+[ -z "${container+x}" ] || exit 0
 
 . /etc/rc.conf
 
