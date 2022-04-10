@@ -3,7 +3,7 @@
 
 type         = scripted
 command      = /usr/bin/udevd --daemon
-stop-command = /usr/bin/udevadm control -e
+stop-command = /usr/bin/sh -c "/usr/bin/udevadm control -e || :"
 logfile      = /run/dinit-udevd.log
 restart      = false
 depends-on   = early-filesystems
