@@ -2,5 +2,4 @@
 
 type        = internal
 restart     = false
-depends-on  = early
-waits-for.d = /etc/dinit.d/init.d
+depends-on  = early.target

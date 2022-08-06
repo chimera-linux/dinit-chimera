@@ -3,5 +3,4 @@
 type        = internal
 restart     = false
 options     = runs-on-console
-depends-on  = init
-waits-for.d = /etc/dinit.d/login.d
+depends-on  = init.target

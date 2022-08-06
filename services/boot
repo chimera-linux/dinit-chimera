@@ -6,7 +6,7 @@
 #
 
 depends-on  = early-static-devnodes
-depends-on  = login
-depends-on  = network
+depends-on  = login.target
+depends-on  = network.target
 
 waits-for.d = /etc/dinit.d/boot.d

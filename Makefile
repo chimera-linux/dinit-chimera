@@ -17,12 +17,6 @@ MANPAGES = modules-load.8
 
 CONF_FILES = rc.conf
 
-TARGETS = \
-	init \
-	network \
-	login \
-	boot
-
 SYSTEM_SERVICES = \
 	boot \
 	early-aux-filesystems \
@@ -88,11 +82,8 @@ install:
 	install -d $(DESTDIR)$(SDINITDIR)
 	install -d $(DESTDIR)$(DINITDIR)
 	install -d $(DESTDIR)$(DINITDIR)/scripts
-	# service targets
-	for target in $(TARGETS); do \
-		install -d $(DESTDIR)$(DINITDIR)/$$target.d; \
-		touch $(DESTDIR)$(DINITDIR)/$$target.d/.empty; \
-	done
+	install -d $(DESTDIR)$(DINITDIR)/boot.d
+	touch $(DESTDIR)$(DINITDIR)/boot.d/.empty
 	# config files
 	for conf in $(CONF_FILES); do \
 		install -m 644 etc/$$conf $(DESTDIR)$(SYSCONFDIR); \

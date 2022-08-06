@@ -2,5 +2,4 @@
 
 type        = internal
 restart     = false
-depends-on  = init
-waits-for.d = /etc/dinit.d/network.d
+depends-on  = init.target
