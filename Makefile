@@ -25,16 +25,16 @@ SYSTEM_SERVICES = \
 	early-filesystems \
 	early-hwclock \
 	early-modules \
-	early \
 	early-root-fsck \
 	early-root-rw \
 	early-static-devnodes \
 	early-udev-settle \
 	early-udev-trigger \
 	early-udevd	\
-	init \
-	login \
-	network \
+	early.target \
+	init.target \
+	login.target \
+	network.target \
 	recovery \
 	single
 
