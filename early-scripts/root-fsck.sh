@@ -2,7 +2,7 @@
 
 [ -x /usr/bin/fsck ] || exit 0
 
-ROOTDEV=`/usr/bin/findmnt -o SOURCE -n -M /`
+ROOTDEV=`/usr/bin/findmnt -v -o SOURCE -n -M /`
 
 echo "Checking root file system (^C to skip)..."
 
