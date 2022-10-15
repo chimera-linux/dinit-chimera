@@ -2,6 +2,7 @@
 # as the first thing and takes care of the following:
 #
 # - starting the oneshots
+# - starting the user service manager
 # - starting all services in the boot.d directory
 #
 
@@ -9,4 +10,5 @@ depends-on  = early-static-devnodes
 depends-on  = login.target
 depends-on  = network.target
 
+waits-for   = dinit-userservd
 waits-for.d = /etc/dinit.d/boot.d
