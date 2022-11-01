@@ -1,0 +1,9 @@
+# This is the actual primary Chimera service. In addition to
+# taking care of starting up the required targets and early
+# services, in addition to starting system-enabled services.
+#
+
+type        = internal
+depends-on  = login.target
+depends-on  = network.target
+waits-for.d = /usr/lib/dinit.d/boot.d

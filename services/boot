@@ -1,14 +1,7 @@
-# This is the primary Chimera service. It kicks in
-# as the first thing and takes care of the following:
-#
-# - starting the oneshots
-# - starting the user service manager
-# - starting all services in the boot.d directory
-#
+# This is the primary entry point. It triggers startup
+# of every other service. In addition to that it also
+# provides the user-enabled service directory.
 
-depends-on  = early-static-devnodes
-depends-on  = login.target
-depends-on  = network.target
-
-waits-for   = dinit-userservd
+type        = internal
+depends-on  = system
 waits-for.d = /etc/dinit.d/boot.d

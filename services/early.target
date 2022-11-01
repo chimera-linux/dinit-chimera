@@ -5,4 +5,5 @@ command      = /usr/libexec/dinit/early/rcboot.sh
 stop-command = /usr/libexec/dinit/early/rcboot-stop.sh
 restart      = false
 logfile      = /var/log/dinit-rcboot.log
+depends-on   = early-modules
 depends-on   = early-aux-filesystems

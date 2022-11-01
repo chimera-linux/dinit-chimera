@@ -36,7 +36,8 @@ SYSTEM_SERVICES = \
 	login.target \
 	network.target \
 	recovery \
-	single
+	single \
+	system
 
 SERVICES = \
 	agetty-console \
@@ -79,11 +80,12 @@ install:
 	install -d $(DESTDIR)$(SYSCONFDIR)
 	install -d $(DESTDIR)$(MANDIR)
 	install -d $(DESTDIR)$(LIBEXECDIR)/dinit/early
-	install -d $(DESTDIR)$(SDINITDIR)
+	install -d $(DESTDIR)$(SDINITDIR)/boot.d
 	install -d $(DESTDIR)$(DINITDIR)
 	install -d $(DESTDIR)$(DINITDIR)/scripts
 	install -d $(DESTDIR)$(DINITDIR)/boot.d
 	touch $(DESTDIR)$(DINITDIR)/boot.d/.empty
+	touch $(DESTDIR)$(SDINITDIR)/boot.d/.empty
 	# config files
 	for conf in $(CONF_FILES); do \
 		install -m 644 etc/$$conf $(DESTDIR)$(SYSCONFDIR); \
@@ -109,4 +111,8 @@ install:
 	# services
 	for srv in $(SERVICES); do \
 		install -m 644 services/$$srv $(DESTDIR)$(DINITDIR); \
+	done
+	# default-enabled services
+	for f in 1 2 3 4 5 6; do \
+		ln -s ../agetty-tty$$f $(DESTDIR)$(SDINITDIR)/boot.d/agetty-tty$$f; \
 	done
