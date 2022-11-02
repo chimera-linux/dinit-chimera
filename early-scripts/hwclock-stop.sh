@@ -3,8 +3,8 @@
 # container environment
 [ -z "${container+x}" ] || exit 0
 
-. /etc/rc.conf
+[ -r /etc/hwclock ] && read -r HWCLOCK < /etc/hwclock
 
-if [ -n "$HARDWARECLOCK" ]; then
-    hwclock --systohc ${HARDWARECLOCK:+--$(echo $HARDWARECLOCK |tr A-Z a-z)}
-fi
+case "$HWCLOCK" in
+    utc|localtime) hwclock --systohc ${HWCLOCK:+--${HWCLOCK}} ;;
+esac

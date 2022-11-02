@@ -3,10 +3,11 @@
 # container environment
 [ -z "${container+x}" ] || exit 0
 
-. /etc/rc.conf
+[ -r /etc/hwclock ] && read -r HWCLOCK < /etc/hwclock
 
-if [ -n "$HARDWARECLOCK" ]; then
-    echo "Setting up RTC to '${HARDWARECLOCK}'..."
-    hwclock --systz \
-        ${HARDWARECLOCK:+--$(echo $HARDWARECLOCK |tr A-Z a-z) --noadjfile} || exit 1
-fi
+case "$HWCLOCK" in
+    utc|localtime)
+        echo "Setting RTC to '${HWCLOCK}'..."
+        hwclock --systz ${HWCLOCK:+--${HWCLOCK} --noadjfile} || exit 1
+        ;;
+esac
