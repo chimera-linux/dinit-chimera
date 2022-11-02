@@ -1,8 +1,0 @@
-# Set up tty and keymap
-
-type       = scripted
-logfile    = /run/dinit-console.log
-command    = /usr/libexec/dinit/early/console.sh
-restart    = false
-depends-on = early-udevd
-depends-on = early-filesystems

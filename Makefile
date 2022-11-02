@@ -15,13 +15,10 @@ BIN_PROGRAMS = modules-load seedrng
 
 MANPAGES = modules-load.8
 
-CONF_FILES = rc.conf
-
 SYSTEM_SERVICES = \
 	boot \
 	early-aux-filesystems \
 	early-aux-fsck \
-	early-console \
 	early-filesystems \
 	early-hwclock \
 	early-modules \
@@ -55,7 +52,6 @@ SERVICES = \
 EARLY_SCRIPTS = \
 	aux-filesystems \
 	aux-filesystems-stop \
-	console \
 	filesystems \
 	hwclock \
 	hwclock-stop \
@@ -85,10 +81,6 @@ install:
 	install -d $(DESTDIR)$(DINITDIR)/boot.d
 	touch $(DESTDIR)$(DINITDIR)/boot.d/.empty
 	touch $(DESTDIR)$(SDINITDIR)/boot.d/.empty
-	# config files
-	for conf in $(CONF_FILES); do \
-		install -m 644 etc/$$conf $(DESTDIR)$(SYSCONFDIR); \
-	done
 	# early scripts
 	for script in $(EARLY_SCRIPTS); do \
 		install -m 755 early-scripts/$$script.sh \

@@ -7,4 +7,3 @@ stop-command = /usr/libexec/dinit/early/hwclock-stop.sh
 restart      = false
 depends-on   = early-udevd
 depends-on   = early-filesystems
-waits-for    = early-console
