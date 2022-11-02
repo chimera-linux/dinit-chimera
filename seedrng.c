@@ -25,6 +25,12 @@
 #define SEED_DIR LOCALSTATEDIR "/seedrng"
 #define CREDITABLE_SEED "seed.credit"
 #define NON_CREDITABLE_SEED "seed.no-credit"
+/* q66: if a file called seed.skip-credit exists in seedrng's state directory,
+ * the seeds will never credit the rng, even if the seed file is creditable
+ *
+ * this replaces the upstream SEEDRNG_SKIP_CREDIT env var mechanism
+ */
+#define SKIP_CREDIT "seed.skip-credit"
 
 enum blake2s_lengths {
 	BLAKE2S_BLOCK_LEN = 64,
@@ -400,11 +406,14 @@ out:
 	return ret ? -1 : 0;
 }
 
-static bool skip_credit(void)
+static bool skip_credit(int dfd)
 {
-	const char *skip = getenv("SEEDRNG_SKIP_CREDIT");
-	return skip && (!strcmp(skip, "1") || !strcasecmp(skip, "true") ||
-			!strcasecmp(skip, "yes") || !strcasecmp(skip, "y"));
+	struct stat buf;
+
+	if (fstatat(dfd, SKIP_CREDIT, &buf, AT_SYMLINK_NOFOLLOW))
+		return false;
+
+	return S_ISREG(buf.st_mode);
 }
 
 int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
@@ -446,7 +455,7 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
 
 	if (seed_from_file_if_exists(NON_CREDITABLE_SEED, dfd, false, &hash) < 0)
 		program_ret |= 1 << 1;
-	if (seed_from_file_if_exists(CREDITABLE_SEED, dfd, !skip_credit(), &hash) < 0)
+	if (seed_from_file_if_exists(CREDITABLE_SEED, dfd, !skip_credit(dfd), &hash) < 0)
 		program_ret |= 1 << 2;
 
 	new_seed_len = determine_optimal_seed_len();
