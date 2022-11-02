@@ -19,24 +19,7 @@ printf "%s" "$HOSTNAME" > /proc/sys/kernel/hostname
 
 if [ -x /usr/bin/sysctl ]; then
     echo "Loading sysctl(8) settings..."
-    mkdir -p /run/csysctl.d
-
-    for i in /run/sysctl.d/*.conf \
-        /etc/sysctl.d/*.conf \
-        /usr/local/lib/sysctl.d/*.conf \
-        /usr/lib/sysctl.d/*.conf; do
-
-        if [ -e "$i" ] && [ ! -e "/run/csysctl.d/${i##*/}" ]; then
-            ln -s "$i" "/run/csysctl.d/${i##*/}"
-        fi
-    done
-
-    for i in /run/csysctl.d/*.conf; do
-        sysctl -p "$i"
-    done
-
-    rm -rf -- /run/csysctl.d
-    sysctl -p /etc/sysctl.conf
+    sysctl --system
 fi
 
 echo "Sanitizing temporary files..."
