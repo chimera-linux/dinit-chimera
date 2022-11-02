@@ -4,6 +4,7 @@
 
 if [ -z "${container+x}" ]; then
     echo "Seeding random number generator..."
+    export SEEDRNG_SKIP_CREDIT
     seedrng || true
 fi
 
