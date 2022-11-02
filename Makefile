@@ -49,7 +49,6 @@ SERVICES = \
 	agetty-tty4 \
 	agetty-tty5 \
 	agetty-tty6 \
-	agetty-ttyAMA0 \
 	agetty-ttyS0 \
 	agetty-ttyUSB0
 
