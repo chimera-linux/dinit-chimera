@@ -11,17 +11,10 @@ echo "Setting up loopback interface..."
 ip link set up dev lo
 
 [ -r /etc/hostname ] && read -r HOSTNAME < /etc/hostname
-if [ -n "$HOSTNAME" ]; then
-    echo "Setting up hostname to '${HOSTNAME}'..."
-    printf "%s" "$HOSTNAME" > /proc/sys/kernel/hostname
-else
-    echo "Didn't setup a hostname!"
-fi
+[ -z "$HOSTNAME"   ] && HOSTNAME=chimera
 
-if [ -n "$TIMEZONE" ]; then
-    echo "Setting up timezone to '${TIMEZONE}'..."
-    ln -sf "/usr/share/zoneinfo/$TIMEZONE" /etc/localtime
-fi
+echo "Setting hostname to '${HOSTNAME}'..."
+printf "%s" "$HOSTNAME" > /proc/sys/kernel/hostname
 
 if [ -x /usr/bin/sysctl ]; then
     echo "Loading sysctl(8) settings..."
