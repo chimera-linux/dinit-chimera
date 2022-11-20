@@ -4,6 +4,10 @@
 # remaining processes have been terminated
 #
 
+if [ -f /run/system_is_container ]; then
+    container=1
+fi
+
 if [ -z "${container+x}" ]; then
     echo "Disabling swap..."
     /usr/bin/swapoff -a
