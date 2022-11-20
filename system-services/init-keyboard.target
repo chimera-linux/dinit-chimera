@@ -1,0 +1,8 @@
+# set the console keyboard layout
+# can be run earlier than full console setup
+
+type       = scripted
+command    = /usr/libexec/dinit/early/setupcon.sh -k
+depends-on = init-devices.target
+before     = init-fs-pre.target
+restart    = false

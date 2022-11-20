@@ -3,6 +3,7 @@
 type       = scripted
 command    = /usr/libexec/dinit/early/cryptdisks.sh early start
 depends-on = init-devices.target
+depends-on = init-keyboard.target
 depends-on = init-dmraid
 depends-on = init-mdadm
 depends-ms = init-root-fsck
