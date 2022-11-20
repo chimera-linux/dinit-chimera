@@ -1,12 +1,11 @@
 # all remaining crypt devices
 
-type         = scripted
-command      = /usr/libexec/dinit/early/cryptdisks.sh remaining start
-stop-command = /usr/libexec/dinit/early/cryptdisks.sh remaining stop
-depends-on   = init-devices.target
-depends-on   = init-cryptdisks-early
-depends-on   = init-dmraid
-depends-on   = init-mdadm
-depends-on   = init-lvm
-depends-ms   = init-root-fsck
-restart      = false
+type       = scripted
+command    = /usr/libexec/dinit/early/cryptdisks.sh remaining start
+depends-on = init-devices.target
+depends-on = init-cryptdisks-early
+depends-on = init-dmraid
+depends-on = init-mdadm
+depends-on = init-lvm
+depends-ms = init-root-fsck
+restart    = false

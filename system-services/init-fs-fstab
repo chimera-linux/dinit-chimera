@@ -2,7 +2,6 @@
 
 type         = scripted
 command      = /usr/libexec/dinit/early/fs-fstab.sh start
-stop-command = /usr/libexec/dinit/early/fs-fstab.sh stop
 depends-on   = init-fs-pre.target
 depends-on   = init-root-rw.target
 depends-on   = init-fs-zfs

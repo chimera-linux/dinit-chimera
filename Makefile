@@ -40,6 +40,8 @@ install: bin/seedrng
 		install -m 755 $$script \
 			$(DESTDIR)$(LIBEXECDIR)/dinit/early; \
 	done
+	# shutdown script
+	install -m 755 bin/shutdown $(DESTDIR)$(LIBEXECDIR)/dinit
 	# programs
 	for prog in $(BIN_PROGRAMS); do \
 		install -m 755 bin/$$prog $(DESTDIR)$(BINDIR); \

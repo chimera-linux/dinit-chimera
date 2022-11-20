@@ -2,6 +2,5 @@
 
 type         = scripted
 command      = swapon -a
-stop-command = swapoff -a
 depends-on   = init-fs-local.target
 restart      = false

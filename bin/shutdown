@@ -1,0 +1,25 @@
+#!/bin/sh
+#
+# run after all services have shut down and
+# remaining processes have been terminated
+#
+
+if [ -z "${container+x}" ]; then
+    echo "Disabling swap..."
+    /usr/bin/swapoff -a
+    echo "Unmounting filesystems..."
+    /usr/libexec/dinit/early/fs-fstab.sh stop
+    echo "Remounting root read-only..."
+    /usr/bin/mount -n -o remount,ro /
+fi
+
+/usr/bin/sync
+
+if [ -z "${container+x}" ]; then
+    echo "Deactivating cryptdisks..."
+    /usr/libexec/dinit/early/cryptdisks.sh remaining stop
+    echo "Deactivating volume groups..."
+    /usr/libexec/dinit/early/lvm.sh stop
+    echo "Deactivating remaining cryptdisks..."
+    /usr/libexec/dinit/early/cryptdisks.sh early stop
+fi
