@@ -1,6 +1,6 @@
 # btrfs setup
 
 type         = scripted
-command      = swapon -a
+command      = /usr/bin/swapon -a
 depends-on   = init-fs-local.target
 restart      = false
