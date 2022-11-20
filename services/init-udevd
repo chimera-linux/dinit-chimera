@@ -4,6 +4,6 @@
 type         = scripted
 command      = /usr/bin/udevd --daemon
 stop-command = /usr/bin/sh -c "/usr/bin/udevadm control -e || :"
-logfile      = /run/dinit-udevd.log
+depends-on   = init-prepare.target
+depends-on   = init-modules-early
 restart      = false
-depends-on   = early-filesystems

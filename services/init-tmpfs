@@ -1,0 +1,6 @@
+# Mount some early temp filesystems
+
+type       = scripted
+command    = /usr/libexec/dinit/early/tmpfs.sh
+depends-on = init-remount-ro
+restart    = false

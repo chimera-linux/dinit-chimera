@@ -1,0 +1,6 @@
+# Mount pseudo-filesystems such as /proc
+
+type       = scripted
+command    = /usr/libexec/dinit/early/pseudofs.sh
+depends-on = init-remount-ro
+restart    = false

@@ -1,0 +1,9 @@
+# Remount root filesystem as r/w
+
+type         = scripted
+command      = /usr/bin/mount -n -o remount,rw /
+stop-command = /usr/bin/mount -n -o remount,ro /
+depends-ms   = init-root-fsck
+waits-for    = init-hwclock
+restart      = false
+options      = starts-rwfs

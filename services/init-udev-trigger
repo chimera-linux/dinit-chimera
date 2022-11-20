@@ -2,6 +2,5 @@
 
 type       = scripted
 command    = /usr/bin/udevadm trigger --action=add
-logfile    = /run/dinit-udev-trigger.log
+depends-on = init-udevd
 restart    = false
-depends-on = early-udevd

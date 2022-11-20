@@ -1,0 +1,9 @@
+# seed the rng
+
+type         = scripted
+command      = /usr/libexec/dinit/early/rng.sh start
+stop-command = /usr/libexec/dinit/early/rng.sh stop
+depends-on   = init-devices.target
+depends-on   = init-modules.target
+depends-on   = init-root-rw.target
+restart      = false

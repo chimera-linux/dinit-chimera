@@ -1,6 +1,0 @@
-# Mount early (virtual) filesystems such as /proc
-
-type    = scripted
-command = /usr/libexec/dinit/early/filesystems.sh
-restart = false
-options = starts-rwfs

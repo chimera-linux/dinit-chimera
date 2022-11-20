@@ -1,6 +1,6 @@
 # Virtual service run before login is enabled
 
-type        = internal
-restart     = false
-options     = runs-on-console
-depends-on  = init.target
+type       = internal
+depends-on = init-local.target
+restart    = false
+options    = runs-on-console

@@ -3,4 +3,4 @@
 type       = scripted
 command    = /usr/libexec/dinit/early/modules.sh
 restart    = false
-depends-on = early-static-devnodes
+depends-on = init-modules-early

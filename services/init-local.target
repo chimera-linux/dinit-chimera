@@ -1,0 +1,6 @@
+# rc.local has been run
+
+type       = scripted
+command    = /usr/libexec/dinit/early/local.sh
+depends-on = init-done.target
+restart    = false

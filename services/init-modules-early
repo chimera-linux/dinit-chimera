@@ -2,6 +2,6 @@
 # Load them by looking at the output of `kmod static-nodes`
 
 type       = scripted
-command    = /usr/libexec/dinit/early/static-devnodes.sh
+command    = /usr/libexec/dinit/early/modules-early.sh
 restart    = false
-depends-on = early-filesystems
+depends-on = init-prepare.target

@@ -15,52 +15,6 @@ BIN_PROGRAMS = modules-load seedrng
 
 MANPAGES = modules-load.8
 
-SYSTEM_SERVICES = \
-	boot \
-	early-aux-filesystems \
-	early-aux-fsck \
-	early-filesystems \
-	early-hwclock \
-	early-modules \
-	early-root-fsck \
-	early-root-rw \
-	early-static-devnodes \
-	early-udev-settle \
-	early-udev-trigger \
-	early-udevd	\
-	early.target \
-	init.target \
-	login.target \
-	network.target \
-	recovery \
-	single \
-	system
-
-SERVICES = \
-	agetty-console \
-	agetty-hvc0 \
-	agetty-hvsi0 \
-	agetty-tty1 \
-	agetty-tty2 \
-	agetty-tty3 \
-	agetty-tty4 \
-	agetty-tty5 \
-	agetty-tty6 \
-	agetty-ttyS0 \
-	agetty-ttyUSB0
-
-EARLY_SCRIPTS = \
-	aux-filesystems \
-	aux-filesystems-stop \
-	filesystems \
-	hwclock \
-	hwclock-stop \
-	modules \
-	rcboot-stop \
-	rcboot \
-	root-fsck \
-	static-devnodes
-
 all: bin/seedrng
 
 bin/seedrng:
@@ -69,7 +23,7 @@ bin/seedrng:
 clean:
 	rm -f bin/seedrng
 
-install:
+install: bin/seedrng
 	install -d $(DESTDIR)$(BINDIR)
 	install -d $(DESTDIR)$(DATADIR)
 	install -d $(DESTDIR)$(SYSCONFDIR)
@@ -82,11 +36,10 @@ install:
 	touch $(DESTDIR)$(DINITDIR)/boot.d/.empty
 	touch $(DESTDIR)$(SDINITDIR)/boot.d/.empty
 	# early scripts
-	for script in $(EARLY_SCRIPTS); do \
-		install -m 755 early-scripts/$$script.sh \
+	for script in early-scripts/*.sh; do \
+		install -m 755 $$script \
 			$(DESTDIR)$(LIBEXECDIR)/dinit/early; \
 	done
-	install -m 755 early-scripts/crypt.awk $(DESTDIR)$(LIBEXECDIR)/dinit/early
 	# programs
 	for prog in $(BIN_PROGRAMS); do \
 		install -m 755 bin/$$prog $(DESTDIR)$(BINDIR); \
@@ -95,13 +48,13 @@ install:
 	for man in $(MANPAGES); do \
 		install -m 644 man/$$man $(DESTDIR)$(MANDIR); \
 	done
-	# system services
-	for srv in $(SYSTEM_SERVICES); do \
-		install -m 644 services/$$srv $(DESTDIR)$(SDINITDIR); \
-	done
 	# services
-	for srv in $(SERVICES); do \
-		install -m 644 services/$$srv $(DESTDIR)$(DINITDIR); \
+	for srv in services/agetty*; do \
+		install -m 644 $$srv $(DESTDIR)$(DINITDIR); \
+	done
+	# system services
+	for srv in services/*; do \
+		install -m 644 $$srv $(DESTDIR)$(SDINITDIR); \
 	done
 	# default-enabled services
 	for f in 1 2 3 4 5 6; do \

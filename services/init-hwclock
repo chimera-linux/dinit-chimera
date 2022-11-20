@@ -1,0 +1,8 @@
+# Set system time from hardware clock
+
+type         = scripted
+command      = /usr/libexec/dinit/early/hwclock.sh start
+stop-command = /usr/libexec/dinit/early/hwclock.sh stop
+depends-on   = init-udevd
+depends-on   = init-prepare.target
+restart      = false

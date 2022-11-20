@@ -1,0 +1,10 @@
+# crypt devices not dependent on lvm
+
+type         = scripted
+command      = /usr/libexec/dinit/early/cryptdisks.sh early start
+stop-command = /usr/libexec/dinit/early/cryptdisks.sh early stop
+depends-on   = init-devices.target
+depends-on   = init-dmraid
+depends-on   = init-mdadm
+depends-ms   = init-root-fsck
+restart      = false

@@ -1,0 +1,11 @@
+# lvm vg setup
+
+type          = scripted
+command       = /usr/libexec/dinit/early/lvm.sh start
+stop-command  = /usr/libexec/dinit/early/lvm.sh stop
+depends-on    = init-devices.target
+depends-on    = init-cryptdisks-early
+depends-on    = init-dmraid
+depends-on    = init-mdadm
+depends-ms    = init-root-fsck
+restart       = false

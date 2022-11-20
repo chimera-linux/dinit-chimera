@@ -21,7 +21,6 @@ elif [ $(($fsckresult & 2)) -eq 2 ]; then
     echo "***********************"
     echo "WARNING WARNING WARNING"
     echo "***********************"
-    echo "The root file system had problems (now repaired): rebooting..."
-    sleep 5
-    /usr/bin/reboot --use-passed-cfd -r
+    echo "The root file system was repaired, continuing boot..."
+    sleep 2
 fi

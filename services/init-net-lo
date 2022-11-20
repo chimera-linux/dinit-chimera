@@ -1,0 +1,6 @@
+# set up the loopback interface
+
+type         = scripted
+command      = /usr/bin/ip link set up dev lo
+depends-on   = init-devices.target
+restart      = false

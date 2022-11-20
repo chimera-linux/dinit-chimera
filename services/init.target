@@ -1,5 +1,0 @@
-# Virtual service that runs startup services after early boot
-
-type        = internal
-restart     = false
-depends-on  = early.target

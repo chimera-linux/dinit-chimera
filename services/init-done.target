@@ -1,0 +1,9 @@
+# core system init has been done
+
+type       = internal
+depends-on = init-fs-local.target
+depends-on = init-rng
+depends-on = init-net-lo
+depends-on = init-hostname
+depends-on = init-sysctl
+restart    = false

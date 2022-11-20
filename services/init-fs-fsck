@@ -1,0 +1,8 @@
+# Check auxiliary filesystems
+
+type       = scripted
+command    = /usr/bin/fsck -A -R -C -a -t noopts=_netdev
+depends-on = init-fs-pre.target
+depends-on = init-fs-btrfs
+restart    = false
+options    = starts-on-console

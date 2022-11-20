@@ -9,8 +9,4 @@
 # container environment
 [ -z "${container+x}" ] || exit 0
 
-echo "Loading kernel modules..."
-
 modules-load -v | tr '\n' ' ' | sed 's:insmod [^ ]*/::g; s:\.ko\(\.gz\)\? ::g'
-
-echo

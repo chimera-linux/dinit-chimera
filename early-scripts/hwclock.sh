@@ -7,7 +7,14 @@
 
 case "$HWCLOCK" in
     utc|localtime)
-        echo "Setting RTC to '${HWCLOCK}'..."
-        hwclock --systz ${HWCLOCK:+--${HWCLOCK} --noadjfile} || exit 1
+        case "$1" in
+            start)
+                hwclock --systz ${HWCLOCK:+--${HWCLOCK} --noadjfile}
+                ;;
+            stop)
+                hwclock --systohc ${HWCLOCK:+--${HWCLOCK}}
+                ;;
+            *) exit 1 ;;
+        esac
         ;;
 esac
