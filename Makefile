@@ -49,11 +49,11 @@ install: bin/seedrng
 		install -m 644 man/$$man $(DESTDIR)$(MANDIR); \
 	done
 	# services
-	for srv in services/agetty*; do \
+	for srv in services/*; do \
 		install -m 644 $$srv $(DESTDIR)$(DINITDIR); \
 	done
 	# system services
-	for srv in services/*; do \
+	for srv in system-services/*; do \
 		install -m 644 $$srv $(DESTDIR)$(SDINITDIR); \
 	done
 	# default-enabled services
