@@ -6,5 +6,4 @@ depends-on = init-root-rw.target
 depends-on = init-fs-btrfs
 depends-on = init-fs-zfs
 depends-on = init-fs-fstab
-depends-on = init-swap
 restart    = false

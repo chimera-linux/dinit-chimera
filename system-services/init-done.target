@@ -3,6 +3,7 @@
 type       = internal
 depends-on = init-fs-local.target
 depends-on = init-console.target
+depends-on = init-swap
 depends-on = init-rng
 depends-on = init-net-lo
 depends-on = init-hostname
