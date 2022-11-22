@@ -2,6 +2,7 @@
 
 [ -z "${container+x}" ] || exit 0
 [ -r /usr/lib/cryptsetup/cryptdisks-functions ] || exit 0
+[ -r /etc/crypttab ] || exit 0
 
 . /usr/lib/cryptsetup/cryptdisks-functions
 
