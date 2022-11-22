@@ -2,7 +2,6 @@ CC         ?= cc
 CFLAGS     ?= -O2
 PREFIX     ?= /usr
 SYSCONFDIR ?= /etc
-BINDIR     ?= $(PREFIX)/bin
 LIBDIR     ?= $(PREFIX)/lib
 LIBEXECDIR ?= $(PREFIX)/libexec
 DATADIR    ?= $(PREFIX)/share
@@ -11,20 +10,17 @@ SDINITDIR  ?= $(LIBDIR)/dinit.d
 DINITDIR   ?= $(SYSCONFDIR)/dinit.d
 EXTRA_CFLAGS = -Wall -Wextra
 
-BIN_PROGRAMS = modules-load seedrng
+MANPAGES = init-modules.target.8
 
-MANPAGES = modules-load.8
+all: seedrng
 
-all: bin/seedrng
-
-bin/seedrng:
-	$(CC) $(EXTRA_CFLAGS) $(CFLAGS) $(LDFLAGS) seedrng.c -o bin/seedrng
+seedrng:
+	$(CC) $(EXTRA_CFLAGS) $(CFLAGS) $(LDFLAGS) seedrng.c -o seedrng
 
 clean:
-	rm -f bin/seedrng
+	rm -f seedrng
 
-install: bin/seedrng
-	install -d $(DESTDIR)$(BINDIR)
+install: seedrng
 	install -d $(DESTDIR)$(DATADIR)
 	install -d $(DESTDIR)$(SYSCONFDIR)
 	install -d $(DESTDIR)$(MANDIR)
@@ -41,11 +37,9 @@ install: bin/seedrng
 			$(DESTDIR)$(LIBEXECDIR)/dinit/early; \
 	done
 	# shutdown script
-	install -m 755 bin/shutdown $(DESTDIR)$(LIBEXECDIR)/dinit
-	# programs
-	for prog in $(BIN_PROGRAMS); do \
-		install -m 755 bin/$$prog $(DESTDIR)$(BINDIR); \
-	done
+	install -m 755 dinit-shutdown $(DESTDIR)$(LIBEXECDIR)/dinit/shutdown
+	# helper programs
+	install -m 755 seedrng $(DESTDIR)$(LIBEXECDIR)
 	# manpages
 	for man in $(MANPAGES); do \
 		install -m 644 man/$$man $(DESTDIR)$(MANDIR); \

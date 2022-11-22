@@ -1,5 +1,7 @@
 #!/bin/sh
 
 [ -z "${container+x}" ] || exit 0
-/usr/bin/seedrng
+
+/usr/libexec/seedrng
+
 exit 0
