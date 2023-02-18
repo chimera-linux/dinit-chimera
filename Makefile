@@ -44,15 +44,7 @@ install: seedrng
 	for man in $(MANPAGES); do \
 		install -m 644 man/$$man $(DESTDIR)$(MANDIR); \
 	done
-	# services
-	for srv in services/*; do \
-		install -m 644 $$srv $(DESTDIR)$(DINITDIR); \
-	done
 	# system services
 	for srv in system-services/*; do \
 		install -m 644 $$srv $(DESTDIR)$(SDINITDIR); \
-	done
-	# default-enabled services
-	for f in 1 2 3 4 5 6; do \
-		ln -s ../agetty-tty$$f $(DESTDIR)$(SDINITDIR)/boot.d/agetty-tty$$f; \
 	done
