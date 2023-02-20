@@ -5,16 +5,14 @@
 
 [ -r /etc/hwclock ] && read -r HWCLOCK < /etc/hwclock
 
-case "$HWCLOCK" in
-    utc|localtime)
-        case "$1" in
-            start)
-                hwclock --systz ${HWCLOCK:+--${HWCLOCK} --noadjfile}
-                ;;
-            stop)
-                hwclock --systohc ${HWCLOCK:+--${HWCLOCK}}
-                ;;
-            *) exit 1 ;;
-        esac
-        ;;
+case "$1" in
+    start|stop) ;;
+    *) exit 1 ;;
 esac
+
+case "$HWCLOCK" in
+    utc|localtime) set -- "$1" "$HWCLOCK" ;;
+    *) set -- "$1" ;;
+esac
+
+/usr/libexec/hwclock-helper "$@" || :

@@ -12,15 +12,18 @@ EXTRA_CFLAGS = -Wall -Wextra
 
 MANPAGES = init-modules.target.8
 
-all: seedrng
+all: seedrng hwclock-helper
 
 seedrng:
 	$(CC) $(EXTRA_CFLAGS) $(CFLAGS) $(LDFLAGS) seedrng.c -o seedrng
 
-clean:
-	rm -f seedrng
+hwclock-helper:
+	$(CC) $(EXTRA_CFLAGS) $(CFLAGS) $(LDFLAGS) hwclock-helper.c -o hwclock-helper
 
-install: seedrng
+clean:
+	rm -f seedrng hwclock-helper
+
+install: seedrng hwclock-helper
 	install -d $(DESTDIR)$(DATADIR)
 	install -d $(DESTDIR)$(SYSCONFDIR)
 	install -d $(DESTDIR)$(MANDIR)
@@ -40,6 +43,7 @@ install: seedrng
 	install -m 755 dinit-shutdown $(DESTDIR)$(LIBEXECDIR)/dinit/shutdown
 	# helper programs
 	install -m 755 seedrng $(DESTDIR)$(LIBEXECDIR)
+	install -m 755 hwclock-helper $(DESTDIR)$(LIBEXECDIR)
 	# manpages
 	for man in $(MANPAGES); do \
 		install -m 644 man/$$man $(DESTDIR)$(MANDIR); \
