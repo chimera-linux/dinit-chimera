@@ -2,25 +2,44 @@
 
 [ -x /usr/bin/fsck ] || exit 0
 
-ROOTDEV=`/usr/bin/findmnt -v -o SOURCE -n -M /`
+export PATH=/usr/bin
+
+# check fstab for if it should be checked; default is yes
+if [ -r /etc/fstab ]; then
+    ROOTFSPASS=$(awk '{if ($2 == "/") print $6;}' /etc/fstab)
+    # skipped; every other number is treated as that we do check
+    # technically the pass number could be specified as bigger than
+    # for other filesystems, but we don't support this configuration
+    if [ "$ROOTFSPASS" = "0" ]; then
+        echo "Skipping root filesystem check (fs_passno == 0)."
+        exit 0
+    fi
+fi
+
+ROOTDEV=`findmnt -v -o SOURCE -n -M /`
 
 echo "Checking root file system (^C to skip)..."
 
-/usr/bin/fsck -C -a "$ROOTDEV"
-fsckresult=$?
+fsck -C -a "$ROOTDEV"
 
-if [ $((fsckresult & 4)) -eq 4 ]; then
-    echo "***********************"
-    echo "WARNING WARNING WARNING"
-    echo "***********************"
-    echo "The root file system has problems which require user attention."
-    echo "A maintenance shell will now be started; system will then be rebooted."
-    /usr/bin/sulogin
-    /usr/bin/reboot --use-passed-cfd -r
-elif [ $(($fsckresult & 2)) -eq 2 ]; then
-    echo "***********************"
-    echo "WARNING WARNING WARNING"
-    echo "***********************"
-    echo "The root file system was repaired, continuing boot..."
-    sleep 2
-fi
+# it's a bitwise-or, but we are only checking one filesystem
+case $? in
+    0) ;; # nothing
+    1) # fixed errors
+        echo "WARNING: The root filesystem was repaired, continuing boot..."
+        sleep 2
+        ;;
+    2) # system should be rebooted
+        echo "WARNING: The root filesystem was repaired, rebooting..."
+        sleep 5
+        reboot --use-passed-cfd -r
+        ;;
+    4) # uncorrected errors
+        echo "WARNING: The root filesystem has unrecoverable errors."
+        echo "         A recovery shell will now be started for you."
+        echo "         The system will be rebooted when you are done."
+        sulogin
+        reboot --use-passed-cfd -r
+        ;;
+    *) ;;
+esac
