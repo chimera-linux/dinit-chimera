@@ -30,12 +30,11 @@ install: seedrng hwclock-helper
 	install -d $(DESTDIR)$(LIBEXECDIR)/dinit/early
 	install -d $(DESTDIR)$(SDINITDIR)/boot.d
 	install -d $(DESTDIR)$(DINITDIR)
-	install -d $(DESTDIR)$(DINITDIR)/scripts
 	install -d $(DESTDIR)$(DINITDIR)/boot.d
 	touch $(DESTDIR)$(DINITDIR)/boot.d/.empty
 	touch $(DESTDIR)$(SDINITDIR)/boot.d/.empty
 	# early scripts
-	for script in early-scripts/*.sh; do \
+	for script in scripts/*.sh; do \
 		install -m 755 $$script \
 			$(DESTDIR)$(LIBEXECDIR)/dinit/early; \
 	done
@@ -49,6 +48,6 @@ install: seedrng hwclock-helper
 		install -m 644 man/$$man $(DESTDIR)$(MANDIR); \
 	done
 	# system services
-	for srv in system-services/*; do \
+	for srv in services/*; do \
 		install -m 644 $$srv $(DESTDIR)$(SDINITDIR); \
 	done
