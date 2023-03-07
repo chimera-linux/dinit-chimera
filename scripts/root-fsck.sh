@@ -4,6 +4,29 @@
 
 export PATH=/usr/bin
 
+FORCEARG=
+FIXARG="-a"
+
+if [ -r /proc/cmdline ]; then
+    for x in $(cat /proc/cmdline); do
+        case "$x" in
+            fastboot|fsck.mode=skip)
+                echo "Skipping root filesystem check (fastboot)."
+                exit 0
+                ;;
+            forcefsck|fsck.mode=force)
+                FORCEARG="-f"
+                ;;
+            fsckfix|fsck.repair=yes)
+                FIXARG="-y"
+                ;;
+            fsck.repair=no)
+                FIXARG="-n"
+                ;;
+        esac
+    done
+fi
+
 # check fstab for if it should be checked; default is yes
 if [ -r /etc/fstab ]; then
     ROOTFSPASS=$(awk '{if ($2 == "/") print $6;}' /etc/fstab)
@@ -20,7 +43,7 @@ ROOTDEV=`findmnt -v -o SOURCE -n -M /`
 
 echo "Checking root file system (^C to skip)..."
 
-fsck -C -a "$ROOTDEV"
+fsck -C $FORCEARG $FIXARG "$ROOTDEV"
 
 # it's a bitwise-or, but we are only checking one filesystem
 case $? in
