@@ -3,9 +3,9 @@
 type       = internal
 depends-on = init-fs-local.target
 depends-on = init-console.target
-depends-on = init-swap
-depends-on = init-rng
 depends-on = init-net-lo
 depends-on = init-hostname
-depends-on = init-sysctl
+waits-for  = init-swap
+waits-for  = init-rng
+waits-for  = init-sysctl
 restart    = false
