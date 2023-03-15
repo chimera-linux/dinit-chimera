@@ -1,5 +1,5 @@
 # Virtual service for others to depend on; bring up networking daemons
 
 type        = internal
-depends-on  = init-local.target
+depends-on  = pre-network.target
 restart     = false
