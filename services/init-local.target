@@ -3,4 +3,5 @@
 type       = scripted
 command    = /usr/libexec/dinit/early/local.sh
 depends-on = init-done.target
+depends-on = pre-network.target
 restart    = false
