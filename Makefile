@@ -1,5 +1,7 @@
 CC         ?= cc
+CXX        ?= c++
 CFLAGS     ?= -O2
+CXXFLAGS   ?= -O2
 PREFIX     ?= /usr
 SYSCONFDIR ?= /etc
 LIBDIR     ?= $(PREFIX)/lib
@@ -9,10 +11,11 @@ MANDIR     ?= $(DATADIR)/man/man8
 SDINITDIR  ?= $(LIBDIR)/dinit.d
 DINITDIR   ?= $(SYSCONFDIR)/dinit.d
 EXTRA_CFLAGS = -Wall -Wextra
+EXTRA_CXXFLAGS = $(EXTRA_CFLAGS) -fno-rtti -fno-exceptions
 
 MANPAGES = init-modules.target.8
 
-all: seedrng hwclock-helper
+all: seedrng hwclock-helper binfmt-helper
 
 seedrng:
 	$(CC) $(EXTRA_CFLAGS) $(CFLAGS) $(LDFLAGS) seedrng.c -o seedrng
@@ -20,10 +23,13 @@ seedrng:
 hwclock-helper:
 	$(CC) $(EXTRA_CFLAGS) $(CFLAGS) $(LDFLAGS) hwclock-helper.c -o hwclock-helper
 
-clean:
-	rm -f seedrng hwclock-helper
+binfmt-helper:
+	$(CXX) $(EXTRA_CXXFLAGS) $(CXXFLAGS) $(LDFLAGS) binfmt-helper.cc -o binfmt-helper
 
-install: seedrng hwclock-helper
+clean:
+	rm -f seedrng hwclock-helper binfmt-helper
+
+install: seedrng hwclock-helper binfmt-helper
 	install -d $(DESTDIR)$(DATADIR)
 	install -d $(DESTDIR)$(SYSCONFDIR)
 	install -d $(DESTDIR)$(MANDIR)
@@ -43,6 +49,7 @@ install: seedrng hwclock-helper
 	# helper programs
 	install -m 755 seedrng $(DESTDIR)$(LIBEXECDIR)
 	install -m 755 hwclock-helper $(DESTDIR)$(LIBEXECDIR)
+	install -m 755 binfmt-helper $(DESTDIR)$(LIBEXECDIR)
 	# manpages
 	for man in $(MANPAGES); do \
 		install -m 644 man/$$man $(DESTDIR)$(MANDIR); \
