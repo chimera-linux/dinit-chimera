@@ -2,5 +2,4 @@
 
 type        = internal
 depends-on  = pre-network.target
-depends-on  = init-local.target
 restart     = false

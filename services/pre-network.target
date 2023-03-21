@@ -1,5 +1,5 @@
 # Reached before network-related daemons are started
 
 type        = internal
-depends-on  = init-done.target
+depends-on  = init-local.target
 restart     = false
