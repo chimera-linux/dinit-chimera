@@ -16,4 +16,4 @@ modprobe -bq binfmt_misc 2> /dev/null
 mountpoint -q /proc/sys/fs/binfmt_misc || mount -o nosuid,noexec,nodev \
     -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc 2>/dev/null
 
-exec /usr/libexec/binfmt-helper
+exec /usr/libexec/dinit/helpers/binfmt

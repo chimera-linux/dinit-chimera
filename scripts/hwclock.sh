@@ -15,4 +15,4 @@ case "$HWCLOCK" in
     *) set -- "$1" ;;
 esac
 
-/usr/libexec/hwclock-helper "$@" || :
+/usr/libexec/dinit/helpers/hwclock "$@" || :

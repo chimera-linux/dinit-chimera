@@ -34,6 +34,7 @@ install: seedrng hwclock-helper binfmt-helper
 	install -d $(DESTDIR)$(SYSCONFDIR)
 	install -d $(DESTDIR)$(MANDIR)
 	install -d $(DESTDIR)$(LIBEXECDIR)/dinit/early
+	install -d $(DESTDIR)$(LIBEXECDIR)/dinit/helpers
 	install -d $(DESTDIR)$(LIBDIR)/dinit
 	install -d $(DESTDIR)$(SDINITDIR)/boot.d
 	install -d $(DESTDIR)$(DINITDIR)
@@ -48,9 +49,9 @@ install: seedrng hwclock-helper binfmt-helper
 	# shutdown script
 	install -m 755 dinit-shutdown $(DESTDIR)$(LIBDIR)/dinit/shutdown-hook
 	# helper programs
-	install -m 755 seedrng $(DESTDIR)$(LIBEXECDIR)
-	install -m 755 hwclock-helper $(DESTDIR)$(LIBEXECDIR)
-	install -m 755 binfmt-helper $(DESTDIR)$(LIBEXECDIR)
+	install -m 755 seedrng $(DESTDIR)$(LIBEXECDIR)/dinit/helpers/seedrng
+	install -m 755 hwclock-helper $(DESTDIR)$(LIBEXECDIR)/dinit/helpers/hwclock
+	install -m 755 binfmt-helper $(DESTDIR)$(LIBEXECDIR)/dinit/helpers/binfmt
 	# manpages
 	for man in $(MANPAGES); do \
 		install -m 644 man/$$man $(DESTDIR)$(MANDIR); \
