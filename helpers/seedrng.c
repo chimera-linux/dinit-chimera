@@ -1,6 +1,11 @@
 /* Based on code from <https://git.zx2c4.com/seedrng/about/>. */
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <linux/random.h>
+#include <sys/syscall.h>
 #include <sys/random.h>
 #include <sys/ioctl.h>
 #include <sys/file.h>
@@ -354,7 +359,7 @@ static int seed_rng(uint8_t *seed, size_t len, bool credit)
 	random_fd = open("/dev/urandom", O_RDONLY);
 	if (random_fd < 0)
 		return -1;
-	ret = ioctl(random_fd, RNDADDENTROPY, &req);
+	ret = syscall(SYS_ioctl, random_fd, RNDADDENTROPY, &req);
 	if (ret)
 		ret = -errno ? -errno : -EIO;
 	close(random_fd);

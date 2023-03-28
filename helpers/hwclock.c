@@ -36,6 +36,10 @@
  * SUCH DAMAGE.
  */
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -171,7 +175,7 @@ static int do_stop(mod_t mod) {
     }
     tmt.tm_isdst = 0;
 
-    int ret = ioctl(fd, RTC_SET_TIME, &tmt);
+    int ret = syscall(SYS_ioctl, fd, RTC_SET_TIME, &tmt);
     close(fd);
 
     return (ret != 0);

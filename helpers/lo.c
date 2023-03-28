@@ -29,12 +29,17 @@
  * SUCH DAMAGE.
  */
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <err.h>
 #include <net/if.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
 
 int main(void) {
     int fams[] = {PF_INET, PF_PACKET, PF_INET6, PF_UNSPEC};
