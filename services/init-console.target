@@ -6,4 +6,3 @@ command    = /usr/libexec/dinit/early/setupcon.sh
 depends-on = init-devices.target
 depends-on = init-fs-local.target
 depends-on = init-keyboard.target
-restart    = false

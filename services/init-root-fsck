@@ -6,5 +6,4 @@ start-timeout = 0 # unlimited
 depends-on    = init-prepare.target
 depends-ms    = init-udevd
 waits-for     = init-udev-trigger
-restart       = false
 options       = starts-on-console pass-cs-fd start-interruptible skippable

@@ -2,5 +2,4 @@
 
 type       = scripted
 command    = /usr/libexec/dinit/early/modules.sh
-restart    = false
 depends-on = init-modules-early

@@ -4,4 +4,3 @@
 type       = internal
 depends-on = init-udevd
 depends-ms = init-udev-settle
-restart    = false

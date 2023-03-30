@@ -2,4 +2,3 @@
 
 type        = internal
 depends-on  = pre-network.target
-restart     = false

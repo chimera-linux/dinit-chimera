@@ -3,4 +3,3 @@
 type       = scripted
 command    = /usr/libexec/dinit/early/fs-zfs.sh
 depends-on = init-fs-pre.target
-restart    = false

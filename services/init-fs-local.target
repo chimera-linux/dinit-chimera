@@ -6,4 +6,3 @@ depends-on = init-fs-btrfs
 depends-on = init-fs-zfs
 waits-for  = init-root-rw.target
 waits-for  = init-fs-fstab.target
-restart    = false

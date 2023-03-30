@@ -4,5 +4,4 @@ type       = scripted
 command    = /usr/libexec/dinit/early/fs-fsck.sh
 depends-on = init-fs-pre.target
 depends-on = init-fs-btrfs
-restart    = false
 options    = starts-on-console

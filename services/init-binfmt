@@ -4,4 +4,3 @@ type         = scripted
 command      = /usr/libexec/dinit/early/binfmt.sh start
 stop-command = /usr/libexec/dinit/early/binfmt.sh stop
 depends-on   = init-fs-local.target
-restart      = false

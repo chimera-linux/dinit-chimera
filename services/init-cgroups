@@ -3,4 +3,3 @@
 type       = scripted
 command    = /usr/libexec/dinit/early/cgroups.sh
 depends-on = init-pseudofs
-restart    = false

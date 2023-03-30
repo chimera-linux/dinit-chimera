@@ -5,4 +5,3 @@ depends-on = init-devices.target
 depends-on = init-cryptdisks
 depends-on = init-dmraid
 depends-on = init-mdadm
-restart    = false

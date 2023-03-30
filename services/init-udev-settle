@@ -4,4 +4,3 @@ type       = scripted
 command    = /usr/bin/udevadm settle
 depends-on = init-udevd
 depends-on = init-udev-trigger
-restart    = false

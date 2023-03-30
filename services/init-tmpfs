@@ -3,4 +3,3 @@
 type       = scripted
 command    = /usr/libexec/dinit/early/tmpfs.sh
 depends-on = init-root-ro
-restart    = false

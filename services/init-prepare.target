@@ -4,4 +4,3 @@ type       = internal
 depends-on = init-pseudofs
 depends-on = init-tmpfs
 depends-on = init-cgroups
-restart    = false

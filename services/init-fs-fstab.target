@@ -7,4 +7,3 @@ depends-on   = init-fs-zfs
 depends-on   = init-fs-btrfs
 depends-ms   = init-fs-fsck
 waits-for    = init-root-rw.target
-restart      = false

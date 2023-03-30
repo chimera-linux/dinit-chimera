@@ -2,4 +2,3 @@
 
 type    = scripted
 command = /usr/bin/mount -o remount,ro /
-restart = false

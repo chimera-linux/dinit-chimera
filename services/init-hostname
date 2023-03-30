@@ -3,4 +3,3 @@
 type       = scripted
 command    = /usr/libexec/dinit/early/hostname.sh
 depends-on = init-devices.target
-restart    = false

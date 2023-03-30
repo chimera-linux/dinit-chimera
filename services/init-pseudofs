@@ -3,4 +3,3 @@
 type       = scripted
 command    = /usr/libexec/dinit/early/pseudofs.sh
 depends-on = init-root-ro
-restart    = false

@@ -2,4 +2,3 @@
 
 type        = internal
 depends-on  = init-local.target
-restart     = false

@@ -3,4 +3,3 @@
 type         = scripted
 command      = /usr/libexec/dinit/helpers/lo
 depends-on   = init-devices.target
-restart      = false

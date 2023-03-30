@@ -2,5 +2,4 @@
 
 type       = internal
 depends-on = init-local.target
-restart    = false
 options    = runs-on-console

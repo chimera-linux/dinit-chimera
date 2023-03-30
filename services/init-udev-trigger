@@ -3,4 +3,3 @@
 type       = scripted
 command    = /usr/bin/udevadm trigger --action=add
 depends-on = init-udevd
-restart    = false

@@ -3,4 +3,5 @@
 
 type    = process
 command = /usr/bin/sulogin
+restart = false
 options = runs-on-console

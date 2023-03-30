@@ -4,5 +4,4 @@ type         = scripted
 command      = /usr/libexec/dinit/early/root-rw.sh
 depends-ms   = init-root-fsck
 waits-for    = init-hwclock
-restart      = false
 options      = starts-rwfs
