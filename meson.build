@@ -117,6 +117,7 @@ services = [
     'recovery',
     'single',
     'system',
+    'time-sync.target',
 ]
 
 foreach srv: services

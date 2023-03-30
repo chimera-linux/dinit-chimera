@@ -1,0 +1,4 @@
+# Virtual service for others to depend on; time should be synced now
+
+type        = internal
+depends-on  = init-local.target
