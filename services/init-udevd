@@ -6,3 +6,4 @@ command      = /usr/libexec/udevd --daemon
 stop-command = /usr/bin/sh -c "/usr/bin/udevadm control -e || :"
 depends-on   = init-prepare.target
 depends-on   = init-modules-early
+depends-on   = init-tmpfiles-dev

@@ -14,8 +14,8 @@ project(
 dexecdir = get_option('libexecdir') / 'dinit'
 helperdir = dexecdir / 'helpers'
 earlydir = dexecdir / 'early'
-scsrvdir = get_option('sysconfdir') / 'dinit.d'
 dlibdir = get_option('libdir') / 'dinit'
+tmpfdir = get_option('libdir') / 'tmpfiles.d'
 srvdir = get_option('libdir') / 'dinit.d'
 
 helpers = [
@@ -64,6 +64,7 @@ scripts = [
     'setupcon.sh',
     'sysctl.sh',
     'tmpfs.sh',
+    'tmpfiles.sh',
 ]
 
 foreach scr: scripts
@@ -108,6 +109,8 @@ services = [
     'init-swap',
     'init-sysctl',
     'init-tmpfs',
+    'init-tmpfiles',
+    'init-tmpfiles-dev',
     'init-udev-settle',
     'init-udev-trigger',
     'init-udevd',
@@ -135,14 +138,19 @@ install_data(
     install_mode: 'rwxr-xr-x',
 )
 
-# keep boot.d dirs in place
-install_data(
-    'util/.empty',
-    install_dir: srvdir / 'boot.d',
-    install_mode: 'rw-r--r--',
-)
-install_data(
-    'util/.empty',
-    install_dir: scsrvdir / 'boot.d',
-    install_mode: 'rw-r--r--',
-)
+tmpfiles = [
+    'chimera.conf',
+    'home.conf',
+    'static-nodes-permissions.conf',
+    'tmp.conf',
+    'var.conf',
+    'x11.conf',
+]
+
+foreach tmpf: tmpfiles
+    install_data(
+        'tmpfiles/' + tmpf,
+        install_dir: tmpfdir,
+        install_mode: 'rw-r--r--',
+    )
+endforeach
