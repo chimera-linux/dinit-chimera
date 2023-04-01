@@ -71,6 +71,7 @@ services should not have to depend on `init-prepare.target` and so on.
   * Temporary/volatile files/dirs managed with `tmpfiles.d` are not guaranteed yet.
   * Most services should prefer `init-local.target` as their sentinel.
   * Typically only for services that should guarantee being up before `rc.local` is run.
+  * All targets above this one are guaranteed to have been reached.
 * `init-local.target` - `/etc/rc.local` has run and temp/volatile files/dirs are created
   * Implies `init-done.target`.
   * Most regular services should depend on at least this one (or `init-done.target`).
