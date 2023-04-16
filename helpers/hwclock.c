@@ -72,16 +72,20 @@ static int usage(char **argv) {
 }
 
 static mod_t rtc_mod_guess(void) {
-    mod_t ret = MOD_LOCALTIME;
+    mod_t ret = MOD_UTC;
 
     FILE *f = fopen("/etc/adjtime", "r");
     if (!f) {
-        return MOD_LOCALTIME;
+        return MOD_UTC;
     }
 
     char buf[256];
     while (fgets(buf, sizeof(buf), f)) {
-        if (!strncmp(buf, "UTC", 3)) {
+        /* last line will decide it, compliant file should be 3 lines */
+        if (!strncmp(buf, "LOCAL", 5)) {
+            ret = MOD_LOCALTIME;
+            break;
+        } else if (!strncmp(buf, "UTC", 3)) {
             ret = MOD_UTC;
             break;
         }

@@ -71,7 +71,7 @@ static void usage(FILE *f) {
 "Register or unregister formats with binfmt_misc.\n"
 "\n"
 "      -u  Unregister instead of registering.\n"
-"      -p  Print the contents of config fils to standard output.\n"
+"      -p  Print the contents of config files to standard output.\n"
 "      -h  Print this message and exit.\n",
         __progname
     );
