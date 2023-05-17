@@ -1,8 +1,9 @@
 #!/bin/sh
 
-[ -x /usr/bin/fsck ] || exit 0
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
-export PATH=/usr/bin
+[ -e /run/dinit/container ] && exit 0
+command -v fsck > /dev/null 2>&1 || exit 0
 
 FORCEARG=
 FIXARG="-a"

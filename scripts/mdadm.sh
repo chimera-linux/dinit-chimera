@@ -1,6 +1,8 @@
 #!/bin/sh
 
-[ -z "${container+x}" ] || exit 0
-[ -x /usr/bin/mdadm   ] || exit 0
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
-/usr/bin/mdadm -As
+[ -e /run/dinit/container ] && exit 0
+command -v mdadm > /dev/null 2>&1 || exit 0
+
+mdadm -As

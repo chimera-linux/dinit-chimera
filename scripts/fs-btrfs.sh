@@ -1,6 +1,8 @@
 #!/bin/sh
 
-[ -z "${container+x}" ] || exit 0
-[ -x /usr/bin/btrfs   ] || exit 0
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
-/usr/bin/btrfs device scan || exit 0
+[ -e /run/dinit/container ] && exit 0
+command -v btrfs > /dev/null 2>&1 || exit 0
+
+btrfs device scan || exit 0

@@ -1,6 +1,8 @@
 #!/bin/sh
 
-/usr/bin/systemd-tmpfiles "$@"
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+systemd-tmpfiles "$@"
 
 RET=$?
 case "$RET" in

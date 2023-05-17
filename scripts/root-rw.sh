@@ -1,6 +1,8 @@
 #!/bin/sh
 
-export PATH=/usr/bin
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+[ -e /run/dinit/container ] && exit 0
 
 # do not remount as rw if the intent is to stay as ro
 if [ -r /etc/fstab ]; then

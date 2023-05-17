@@ -4,22 +4,20 @@
 # remaining processes have been terminated
 #
 
-if [ -f /run/system_is_container ]; then
-    container=1
-fi
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
-if [ -z "${container+x}" ]; then
+if [ ! -e /run/dinit/container ]; then
     echo "Disabling swap..."
-    /usr/bin/swapoff -a
+    swapoff -a
     echo "Unmounting filesystems..."
     /usr/libexec/dinit/early/fs-fstab.sh stop
     echo "Remounting root read-only..."
-    /usr/bin/mount -n -o remount,ro /
+    mount -n -o remount,ro /
 fi
 
-/usr/bin/sync
+sync
 
-if [ -z "${container+x}" ]; then
+if [ ! -e /run/dinit/container ]; then
     echo "Deactivating cryptdisks..."
     /usr/libexec/dinit/early/cryptdisks.sh remaining stop
     echo "Deactivating volume groups..."

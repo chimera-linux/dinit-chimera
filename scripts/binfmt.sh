@@ -1,12 +1,12 @@
 #!/bin/sh
 
-export PATH=/usr/bin
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
 # container environment
-[ -z "${container+x}" ] || exit 0
+[ -e /run/dinit/container ] && exit 0
 
 if [ "$1" = "stop" ]; then
-   exec /usr/libexec/binfmt-helper -u
+   exec /usr/libexec/dinit/helpers/binfmt -u
 fi
 
 # require the module if it's around, but don't fail - it may be builtin

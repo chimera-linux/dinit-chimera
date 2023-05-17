@@ -1,6 +1,6 @@
 #!/bin/sh
 
-[ -z "${container+x}" ] || exit 0
+[ -e /run/dinit/container ] && exit 0
 
 /usr/libexec/dinit/helpers/seedrng
 

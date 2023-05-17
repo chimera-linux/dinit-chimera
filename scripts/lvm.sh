@@ -1,13 +1,15 @@
 #!/bin/sh
 
-[ -z "${container+x}"  ] || exit 0
-[ -x /usr/bin/vgchange ] || exit 0
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+[ -e /run/dinit/container ] && exit 0
+command -v vgchange > /dev/null 2>&1 || exit 0
 
 case "$1" in
-    start) /usr/bin/vgchange --sysinit -a ay ;;
+    start) vgchange --sysinit -a ay ;;
     stop)
         if [ $(vgs | wc -l) -gt 0 ]; then
-            /usr/bin/vgchange -an
+            vgchange -an
         fi
         ;;
 esac

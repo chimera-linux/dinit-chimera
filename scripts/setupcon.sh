@@ -1,5 +1,8 @@
 #!/bin/sh
 
-[ -x /usr/bin/setupcon ] || exit 0
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
-exec /usr/bin/setupcon "$@"
+[ -e /run/dinit/container ] && exit 0
+command -v setupcon > /dev/null 2>&1 || exit 0
+
+exec setupcon "$@"

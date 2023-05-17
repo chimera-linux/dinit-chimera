@@ -1,5 +1,7 @@
 #!/bin/sh
 
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
 # no modules support
 [ -e /proc/modules ] || exit 0
 
@@ -7,9 +9,8 @@
 [ -r /etc/modules ] || exit 0
 
 # container environment
-[ -z "${container+x}" ] || exit 0
+[ -e /run/dinit/container ] && exit 0
 
-export PATH=/usr/bin
 {
     # Parameters passed as modules-load= or rd.modules-load= in kernel command line.
     sed -nr 's/,/\n/g;s/(.* |^)(rd\.)?modules-load=([^ ]*).*/\3/p' /proc/cmdline

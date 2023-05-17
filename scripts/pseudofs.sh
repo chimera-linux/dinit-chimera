@@ -1,5 +1,7 @@
 #!/bin/sh
 
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
 set -e
 
 mountpoint -q /proc || mount -o nosuid,noexec,nodev -t proc     proc /proc

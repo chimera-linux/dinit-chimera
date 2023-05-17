@@ -1,5 +1,8 @@
 #!/bin/sh
 
-[ -x /usr/bin/sysctl ] || exit 0
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
-/usr/bin/sysctl --system
+[ -e /run/dinit/container ] && exit 0
+command -v sysctl > /dev/null 2>&1 || exit 0
+
+exec sysctl --system

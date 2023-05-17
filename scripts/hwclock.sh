@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # container environment
-[ -z "${container+x}" ] || exit 0
+[ -e /run/dinit/container ] && exit 0
 
 [ -r /etc/hwclock ] && read -r HWCLOCK < /etc/hwclock
 

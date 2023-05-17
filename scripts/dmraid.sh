@@ -1,6 +1,8 @@
 #!/bin/sh
 
-[ -z "${container+x}" ] || exit 0
-[ -x /usr/bin/dmraid  ] || exit 0
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
-/usr/bin/dmraid -i -ay
+[ -e /run/dinit/container ] && exit 0
+command -v dmraid > /dev/null 2>&1 || exit 0
+
+dmraid -i -ay

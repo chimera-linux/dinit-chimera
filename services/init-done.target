@@ -1,11 +1,13 @@
 # core system init has been done
 
-type       = internal
+type       = scripted
+command    = /usr/libexec/dinit/early/done.sh
 depends-on = init-fs-local.target
 depends-on = init-console.target
 depends-on = init-net-lo
 depends-on = init-hostname
 waits-for  = init-swap
 waits-for  = init-rng
+waits-for  = init-machine-id
 waits-for  = init-sysctl
 waits-for  = init-binfmt

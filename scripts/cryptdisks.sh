@@ -1,6 +1,6 @@
 #!/bin/sh
 
-[ -z "${container+x}" ] || exit 0
+[ -e /run/dinit/container ] && exit 0
 [ -r /usr/lib/cryptsetup/cryptdisks-functions ] || exit 0
 [ -r /etc/crypttab ] || exit 0
 
