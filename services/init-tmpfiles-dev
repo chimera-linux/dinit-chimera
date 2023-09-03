@@ -1,7 +1,0 @@
-# Create static device nodes in /dev
-
-type       = scripted
-command    = /usr/libexec/dinit/early/tmpfiles.sh --prefix=/dev --create --boot
-depends-on = init-modules-early
-depends-on = init-tmpfs
-depends-on = init-root-ro

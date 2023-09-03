@@ -1,0 +1,5 @@
+# Set up cgroup mounts
+
+type       = scripted
+command    = @EARLYDIR@/cgroups.sh
+depends-on = init-pseudofs

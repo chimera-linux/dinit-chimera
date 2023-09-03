@@ -1,0 +1,5 @@
+# Mount pseudo-filesystems such as /proc
+
+type       = scripted
+command    = @EARLYDIR@/pseudofs.sh
+depends-on = init-root-ro

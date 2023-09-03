@@ -1,0 +1,5 @@
+# set up the hostname
+
+type       = scripted
+command    = @EARLYDIR@/hostname.sh
+depends-on = init-devices.target

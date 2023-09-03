@@ -1,0 +1,5 @@
+# Trigger udev events for already-present devices
+
+type       = scripted
+command    = @BINDIR@/udevadm trigger --action=add
+depends-on = init-udevd

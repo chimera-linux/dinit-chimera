@@ -1,0 +1,5 @@
+# Mount some early temp filesystems
+
+type       = scripted
+command    = @EARLYDIR@/tmpfs.sh
+depends-on = init-root-ro

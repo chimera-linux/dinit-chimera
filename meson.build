@@ -18,6 +18,13 @@ dlibdir = get_option('libdir') / 'dinit'
 tmpfdir = get_option('libdir') / 'tmpfiles.d'
 srvdir = get_option('libdir') / 'dinit.d'
 
+# Fix some paths in services
+pathcfg = configuration_data()
+pathcfg.set('EARLYDIR', join_paths(get_option('prefix'), earlydir))
+pathcfg.set('HELPERDIR', join_paths(get_option('prefix'), helperdir))
+pathcfg.set('BINDIR', join_paths(get_option('prefix'), get_option('bindir')))
+pathcfg.set('LIBEXECDIR', join_paths(get_option('prefix'), get_option('libexecdir')))
+
 helpers = [
     ['binfmt',  ['helpers/binfmt.cc']],
     ['hwclock', ['helpers/hwclock.c']],
@@ -127,8 +134,16 @@ services = [
 ]
 
 foreach srv: services
+    configure_file(
+        input: 'services/' + srv + '.in',
+        output: srv,
+        configuration: pathcfg
+    )
+endforeach
+
+foreach srv: services
     install_data(
-        'services/' + srv,
+        meson.current_build_dir() + '/' + srv,
         install_dir: srvdir,
         install_mode: 'rw-r--r--',
     )

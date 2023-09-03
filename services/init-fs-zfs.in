@@ -1,0 +1,5 @@
+# zfs setup
+
+type       = scripted
+command    = @EARLYDIR@/fs-zfs.sh
+depends-on = init-fs-pre.target

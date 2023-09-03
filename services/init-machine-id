@@ -1,6 +1,0 @@
-# try our best to make sure /etc/machine-id is available
-
-type         = scripted
-command      = /usr/libexec/dinit/early/machine-id.sh
-depends-on   = init-rng
-waits-for    = init-root-rw.target

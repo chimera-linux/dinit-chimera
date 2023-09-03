@@ -1,0 +1,10 @@
+# all remaining crypt devices
+
+type       = scripted
+command    = @EARLYDIR@/cryptdisks.sh remaining start
+depends-on = init-devices.target
+depends-on = init-cryptdisks-early
+depends-on = init-dmraid
+depends-on = init-mdadm
+depends-on = init-lvm
+depends-ms = init-root-fsck

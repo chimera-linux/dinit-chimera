@@ -1,0 +1,9 @@
+# other non-network filesystems
+
+type         = scripted
+command      = @EARLYDIR@/fs-fstab.sh start
+depends-on   = init-fs-pre.target
+depends-on   = init-fs-zfs
+depends-on   = init-fs-btrfs
+depends-ms   = init-fs-fsck
+waits-for    = init-root-rw.target

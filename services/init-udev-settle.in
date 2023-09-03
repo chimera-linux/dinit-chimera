@@ -1,0 +1,6 @@
+# Wait until all queued udev events have been processed
+
+type       = scripted
+command    = @BINDIR@/udevadm settle
+depends-on = init-udevd
+depends-on = init-udev-trigger

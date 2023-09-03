@@ -1,0 +1,9 @@
+# crypt devices not dependent on lvm
+
+type       = scripted
+command    = @EARLYDIR@/cryptdisks.sh early start
+depends-on = init-devices.target
+depends-on = init-keyboard.target
+depends-on = init-dmraid
+depends-on = init-mdadm
+depends-ms = init-root-fsck

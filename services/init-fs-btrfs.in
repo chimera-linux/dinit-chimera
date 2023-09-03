@@ -1,0 +1,5 @@
+# btrfs setup
+
+type       = scripted
+command    = @EARLYDIR@/fs-btrfs.sh
+depends-on = init-fs-pre.target

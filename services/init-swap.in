@@ -1,0 +1,5 @@
+# btrfs setup
+
+type         = scripted
+command      = @BINDIR@/swapon -a
+depends-on   = init-fs-local.target

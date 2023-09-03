@@ -1,0 +1,5 @@
+# set up the loopback interface
+
+type         = scripted
+command      = @HELPERDIR@/lo
+depends-on   = init-devices.target

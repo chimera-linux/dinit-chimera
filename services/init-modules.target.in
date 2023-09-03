@@ -1,0 +1,5 @@
+# Load kernel modules from /etc/modules
+
+type       = scripted
+command    = @EARLYDIR@/modules.sh
+depends-on = init-modules-early

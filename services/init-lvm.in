@@ -1,0 +1,9 @@
+# lvm vg setup
+
+type       = scripted
+command    = @EARLYDIR@/lvm.sh start
+depends-on = init-devices.target
+depends-on = init-cryptdisks-early
+depends-on = init-dmraid
+depends-on = init-mdadm
+depends-ms = init-root-fsck

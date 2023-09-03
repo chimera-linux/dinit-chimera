@@ -1,0 +1,4 @@
+# Remount root filesystem as read-only
+
+type    = scripted
+command = @BINDIR@/mount -o remount,ro /

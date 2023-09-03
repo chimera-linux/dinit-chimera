@@ -1,5 +1,0 @@
-# btrfs setup
-
-type         = scripted
-command      = /usr/bin/swapon -a
-depends-on   = init-fs-local.target

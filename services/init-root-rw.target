@@ -1,7 +1,0 @@
-# Remount root filesystem as r/w
-
-type         = scripted
-command      = /usr/libexec/dinit/early/root-rw.sh
-depends-ms   = init-root-fsck
-waits-for    = init-hwclock
-options      = starts-rwfs

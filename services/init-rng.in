@@ -1,0 +1,8 @@
+# seed the rng
+
+type         = scripted
+command      = @EARLYDIR@/rng.sh start
+stop-command = @EARLYDIR@/rng.sh stop
+depends-on   = init-devices.target
+depends-on   = init-modules.target
+waits-for    = init-root-rw.target
