@@ -18,6 +18,7 @@ fi
 sync
 
 if [ ! -e /run/dinit/container ]; then
+    export DM_DISABLE_UDEV=1
     echo "Deactivating cryptdisks..."
     /usr/libexec/dinit/early/cryptdisks.sh remaining stop
     echo "Deactivating volume groups..."
