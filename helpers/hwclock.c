@@ -56,43 +56,16 @@
 /* RTC_SET_TIME */
 #include <linux/rtc.h>
 
+#include "clock_common.h"
+
 typedef enum {
     OPT_START,
     OPT_STOP,
 } opt_t;
 
-typedef enum {
-    MOD_UTC,
-    MOD_LOCALTIME,
-} mod_t;
-
 static int usage(char **argv) {
     printf("usage: %s start|stop [utc|localtime]\n", argv[0]);
     return 1;
-}
-
-static mod_t rtc_mod_guess(void) {
-    mod_t ret = MOD_UTC;
-
-    FILE *f = fopen("/etc/adjtime", "r");
-    if (!f) {
-        return MOD_UTC;
-    }
-
-    char buf[256];
-    while (fgets(buf, sizeof(buf), f)) {
-        /* last line will decide it, compliant file should be 3 lines */
-        if (!strncmp(buf, "LOCAL", 5)) {
-            ret = MOD_LOCALTIME;
-            break;
-        } else if (!strncmp(buf, "UTC", 3)) {
-            ret = MOD_UTC;
-            break;
-        }
-    }
-
-    fclose(f);
-    return ret;
 }
 
 static int do_settimeofday(struct timezone const *tz) {
@@ -107,12 +80,12 @@ static int do_settimeofday(struct timezone const *tz) {
     return (ret != 0);
 }
 
-static int do_start(mod_t mod) {
+static int do_start(rtc_mod_t mod) {
     struct timezone tz = {0};
     int ret = 0;
 
     /* for UTC, lock warp_clock and PCIL */
-    if (mod == MOD_UTC) {
+    if (mod == RTC_MOD_UTC) {
         ret = do_settimeofday(&tz);
         if (ret) {
             goto done;
@@ -124,7 +97,7 @@ static int do_start(mod_t mod) {
     tz.tz_minuteswest = (-lt->tm_gmtoff / 60);
 
     /* set kernel timezone; lock warp_clock and set PCIL if non-UTC */
-    if ((mod != MOD_UTC) || (tz.tz_minuteswest != 0)) {
+    if ((mod != RTC_MOD_UTC) || (tz.tz_minuteswest != 0)) {
         ret = do_settimeofday(&tz);
     }
 
@@ -132,7 +105,7 @@ done:
     return ret;
 }
 
-static int do_stop(mod_t mod) {
+static int do_stop(rtc_mod_t mod) {
     struct timeval tv;
     struct tm tmt = {0};
     /* open rtc; it may be busy, so loop */
@@ -172,7 +145,7 @@ static int do_stop(mod_t mod) {
     }
 
     /* set up tmt */
-    if (mod == MOD_UTC) {
+    if (mod == RTC_MOD_UTC) {
         gmtime_r(&tv.tv_sec, &tmt);
     } else {
         localtime_r(&tv.tv_sec, &tmt);
@@ -192,7 +165,7 @@ int main(int argc, char **argv) {
     }
 
     opt_t opt;
-    mod_t mod;
+    rtc_mod_t mod;
 
     if (!strcmp(argv[1], "start")) {
         opt = OPT_START;
@@ -204,9 +177,9 @@ int main(int argc, char **argv) {
 
     if (argc > 2) {
         if (!strcmp(argv[2], "utc")) {
-            mod = MOD_UTC;
+            mod = RTC_MOD_UTC;
         } else if (!strcmp(argv[2], "localtime")) {
-            mod = MOD_LOCALTIME;
+            mod = RTC_MOD_LOCALTIME;
         } else {
             return usage(argv);
         }

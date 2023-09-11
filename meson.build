@@ -45,6 +45,7 @@ endforeach
 scripts = [
     'binfmt.sh',
     'cgroups.sh',
+    'clock.sh',
     'cryptdisks.sh',
     'dmraid.sh',
     'done.sh',
@@ -53,7 +54,6 @@ scripts = [
     'fs-fstab.sh',
     'fs-zfs.sh',
     'hostname.sh',
-    'hwclock.sh',
     'local.sh',
     'lvm.sh',
     'machine-id.sh',
@@ -111,6 +111,7 @@ services = [
     'init-root-ro',
     'init-root-rw.target',
     'init-swap',
+    'init-swclock',
     'init-sysctl',
     'init-tmpfs',
     'init-tmpfiles',

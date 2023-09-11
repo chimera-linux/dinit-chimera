@@ -47,6 +47,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
+#include <stdint.h>
+#include <time.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/file.h>
@@ -55,6 +57,8 @@
 #include <fcntl.h>
 #include <utime.h>
 #include <err.h>
+
+#include "clock_common.h"
 
 #ifndef LOCALSTATEDIR
 #define LOCALSTATEDIR "/var/lib"
@@ -80,7 +84,7 @@ static int stat_reg(int dfd, char const *fpath, struct stat *st) {
     return 0;
 }
 
-static int do_start(int dfd, time_t curt) {
+static int do_start(int dfd, time_t curt, rtc_mod_t mod) {
     struct timeval tv = {0};
     struct stat st;
     FILE *rtcf, *offf;
@@ -130,6 +134,30 @@ static int do_start(int dfd, time_t curt) {
         goto regular_set;
     }
 
+    /* rtc may be stored in utc or localtime
+     * if it's localtime, adjust by timezone
+     */
+    if (mod == RTC_MOD_LOCALTIME) {
+        time_t rtc_lt;
+        struct tm *rtc_lm;
+        /* give up if we have 32-bit time_t and the rtc value does not fit */
+        if ((sizeof(time_t) == 4) && (rtc_epoch > INT32_MAX)) {
+            goto regular_set;
+        }
+        rtc_lt = (time_t)rtc_epoch;
+        /* gmtime assumes UTC, lie; the result is a localtime struct tm */
+        rtc_lm = gmtime(&rtc_lt);
+        if (!rtc_lm) {
+            goto regular_set;
+        }
+        /* convert our localtime to UTC */
+        rtc_lt = mktime(rtc_lm);
+        if (rtc_lt < 0) {
+            goto regular_set;
+        }
+        rtc_epoch = (unsigned long long)rtc_lt;
+    }
+
     errp = NULL;
     offset = strtoull(offsets, &errp, 10);
     if (!offset || !errp || (*errp && (*errp != '\n'))) {
@@ -138,6 +166,10 @@ static int do_start(int dfd, time_t curt) {
     }
 
     rtc_epoch += offset;
+    /* give up if we have 32-bit time_t and the rtc value does not fit */
+    if ((sizeof(time_t) == 4) && (rtc_epoch > INT32_MAX)) {
+        goto regular_set;
+    }
     /* see if the new time is newer */
     if ((time_t)rtc_epoch < curt) {
         /* nope */
@@ -243,10 +275,23 @@ regular_save:
 
 int main(int argc, char **argv) {
     struct timeval ctv;
+    rtc_mod_t mod;
 
     /* insufficient arguments */
-    if ((argc <= 1) || (argc > 2) || getuid()) {
+    if ((argc <= 1) || (argc > 3) || getuid()) {
         return usage(argv);
+    }
+
+    if (argc > 2) {
+        if (!strcmp(argv[2], "utc")) {
+            mod = RTC_MOD_UTC;
+        } else if (!strcmp(argv[2], "localtime")) {
+            mod = RTC_MOD_LOCALTIME;
+        } else {
+            return usage(argv);
+        }
+    } else {
+        mod = rtc_mod_guess();
     }
 
     if (gettimeofday(&ctv, NULL) < 0) {
@@ -265,7 +310,7 @@ int main(int argc, char **argv) {
     }
 
     if (!strcmp(argv[1], "start")) {
-        return do_start(dfd, ctv.tv_sec);
+        return do_start(dfd, ctv.tv_sec, mod);
     } else if (!strcmp(argv[1], "stop")) {
         return do_stop(dfd, ctv.tv_sec);
     }
