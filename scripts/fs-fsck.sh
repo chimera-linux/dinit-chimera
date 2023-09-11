@@ -2,7 +2,7 @@
 
 [ -x /usr/bin/fsck ] || exit 0
 
-export PATH=/usr/bin
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
 FORCEARG=
 FIXARG="-a"

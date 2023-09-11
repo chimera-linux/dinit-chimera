@@ -21,6 +21,7 @@ srvdir = get_option('libdir') / 'dinit.d'
 helpers = [
     ['binfmt',  ['helpers/binfmt.cc']],
     ['hwclock', ['helpers/hwclock.c']],
+    ['swclock', ['helpers/swclock.c']],
     ['lo',      ['helpers/lo.c']],
     ['seedrng', ['helpers/seedrng.c']],
 ]
