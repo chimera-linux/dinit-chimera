@@ -1,7 +1,7 @@
 # lvm vg setup
 
 type       = scripted
-command    = /usr/libexec/dinit/early/lvm.sh start
+command    = ./early/scripts/lvm.sh start
 depends-on = init-devices.target
 depends-on = init-cryptdisks-early
 depends-on = init-dmraid

@@ -1,6 +1,6 @@
 # set up the sysctls
 
 type       = scripted
-command    = /usr/libexec/dinit/early/sysctl.sh
+command    = ./early/scripts/sysctl.sh
 depends-on = init-devices.target
 depends-on = init-fs-local.target

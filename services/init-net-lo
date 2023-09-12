@@ -1,5 +1,5 @@
 # set up the loopback interface
 
-type         = scripted
-command      = /usr/libexec/dinit/helpers/lo
-depends-on   = init-devices.target
+type       = scripted
+command    = ./early/scripts/net-lo.sh
+depends-on = init-devices.target

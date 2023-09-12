@@ -1,4 +1,0 @@
-# Remount root filesystem as read-only
-
-type    = scripted
-command = /usr/bin/mount -o remount,ro /

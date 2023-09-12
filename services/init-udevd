@@ -2,8 +2,8 @@
 # replaced with a real supervised service once everything else is up
 
 type         = scripted
-command      = /usr/libexec/udevd --daemon
-stop-command = /usr/bin/sh -c "/usr/bin/udevadm control -e || :"
+command      = ./early/scripts/udev.sh start
+stop-command = ./early/scripts/udev.sh stop
 depends-on   = init-prepare.target
 depends-on   = init-modules-early
 depends-on   = init-tmpfiles-dev

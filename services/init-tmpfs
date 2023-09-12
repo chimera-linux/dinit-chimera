@@ -1,5 +1,7 @@
 # Mount some early temp filesystems
 
 type       = scripted
-command    = /usr/libexec/dinit/early/tmpfs.sh
-depends-on = init-root-ro
+command    = ./early/scripts/tmpfs.sh
+depends-on = init-env
+depends-on = init-root-remount
+options    = pass-cs-fd

@@ -1,7 +1,7 @@
 # all remaining crypt devices
 
 type       = scripted
-command    = /usr/libexec/dinit/early/cryptdisks.sh remaining start
+command    = ./early/scripts/cryptdisks.sh remaining start
 depends-on = init-devices.target
 depends-on = init-cryptdisks-early
 depends-on = init-dmraid

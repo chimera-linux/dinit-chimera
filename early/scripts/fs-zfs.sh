@@ -1,8 +1,12 @@
 #!/bin/sh
+#
+# TODO: actually handle errors properly
 
-export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+DINIT_SERVICE=fs-zfs
+DINIT_NO_CONTAINER=1
 
-[ -e /run/dinit/container ] && exit 0
+. ./early/scripts/common.sh
+
 command -v zfs > /dev/null 2>&1 || exit 0
 command -v zpool > /dev/null 2>&1 || exit 0
 

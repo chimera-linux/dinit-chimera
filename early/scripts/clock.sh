@@ -1,9 +1,9 @@
 #!/bin/sh
 
-export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+DINIT_SERVICE="${1:-clock}"
+DINIT_NO_CONTAINER=1
 
-# container environment
-[ -e /run/dinit/container ] && exit 0
+. ./early/scripts/common.sh
 
 [ -r /etc/hwclock ] && read -r HWCLOCK < /etc/hwclock
 
@@ -25,4 +25,4 @@ case "$HWCLOCK" in
     *) set -- "$1" ;;
 esac
 
-/usr/libexec/dinit/helpers/$HELPER "$@" || :
+exec "./early/helpers/${HELPER}" "$@"

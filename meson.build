@@ -11,26 +11,24 @@ project(
     license: 'BSD-2-Clause',
 )
 
-dexecdir = get_option('libexecdir') / 'dinit'
-helperdir = dexecdir / 'helpers'
-earlydir = dexecdir / 'early'
 dlibdir = get_option('libdir') / 'dinit'
 tmpfdir = get_option('libdir') / 'tmpfiles.d'
 srvdir = get_option('libdir') / 'dinit.d'
+earlydir = srvdir / 'early'
 
 helpers = [
-    ['binfmt',  ['helpers/binfmt.cc']],
-    ['hwclock', ['helpers/hwclock.c']],
-    ['swclock', ['helpers/swclock.c']],
-    ['lo',      ['helpers/lo.c']],
-    ['seedrng', ['helpers/seedrng.c']],
+    ['binfmt',  ['early/helpers/binfmt.cc']],
+    ['hwclock', ['early/helpers/hwclock.c']],
+    ['swclock', ['early/helpers/swclock.c']],
+    ['lo',      ['early/helpers/lo.c']],
+    ['seedrng', ['early/helpers/seedrng.c']],
 ]
 
 foreach helper: helpers
     executable(
         helper[0], helper[1],
         install: true,
-        install_dir: helperdir
+        install_dir: earlydir / 'helpers'
     )
 endforeach
 
@@ -46,9 +44,12 @@ scripts = [
     'binfmt.sh',
     'cgroups.sh',
     'clock.sh',
+    'common.sh',
+    'console.sh',
     'cryptdisks.sh',
     'dmraid.sh',
     'done.sh',
+    'env.sh',
     'fs-btrfs.sh',
     'fs-fsck.sh',
     'fs-fstab.sh',
@@ -60,20 +61,23 @@ scripts = [
     'mdadm.sh',
     'modules-early.sh',
     'modules.sh',
+    'net-lo.sh',
     'pseudofs.sh',
     'rng.sh',
     'root-fsck.sh',
+    'root-remount.sh',
     'root-rw.sh',
-    'setupcon.sh',
+    'swap.sh',
     'sysctl.sh',
     'tmpfs.sh',
     'tmpfiles.sh',
+    'udev.sh',
 ]
 
 foreach scr: scripts
     install_data(
-        'scripts/' + scr,
-        install_dir: earlydir,
+        'early/scripts/' + scr,
+        install_dir: earlydir / 'scripts',
         install_mode: 'rwxr-xr-x',
     )
 endforeach
@@ -88,6 +92,7 @@ services = [
     'init-devices.target',
     'init-dmraid',
     'init-done.target',
+    'init-env',
     'init-fs-btrfs',
     'init-fs-fsck',
     'init-fs-fstab.target',
@@ -108,7 +113,7 @@ services = [
     'init-pseudofs',
     'init-rng',
     'init-root-fsck',
-    'init-root-ro',
+    'init-root-remount',
     'init-root-rw.target',
     'init-swap',
     'init-swclock',

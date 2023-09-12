@@ -1,8 +1,10 @@
 #!/bin/sh
 
-export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+DINIT_SERVICE=root-fsck
+DINIT_NO_CONTAINER=1
 
-[ -e /run/dinit/container ] && exit 0
+. ./early/scripts/common.sh
+
 command -v fsck > /dev/null 2>&1 || exit 0
 
 FORCEARG=

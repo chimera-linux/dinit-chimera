@@ -2,5 +2,5 @@
 # can be run earlier than full console setup
 
 type       = scripted
-command    = /usr/libexec/dinit/early/setupcon.sh -k
+command    = ./early/scripts/console.sh keyboard
 depends-on = init-devices.target

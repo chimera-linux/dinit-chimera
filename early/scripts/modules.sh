@@ -1,15 +1,15 @@
 #!/bin/sh
 
-export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+DINIT_SERVICE=modules
+DINIT_NO_CONTAINER=1
+
+. ./early/scripts/common.sh
 
 # no modules support
 [ -e /proc/modules ] || exit 0
 
 # no modules file
 [ -r /etc/modules ] || exit 0
-
-# container environment
-[ -e /run/dinit/container ] && exit 0
 
 {
     # Parameters passed as modules-load= or rd.modules-load= in kernel command line.

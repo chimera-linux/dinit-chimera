@@ -1,6 +1,6 @@
 # Wait until all queued udev events have been processed
 
 type       = scripted
-command    = /usr/bin/udevadm settle
+command    = ./early/scripts/udev.sh settle
 depends-on = init-udevd
 depends-on = init-udev-trigger

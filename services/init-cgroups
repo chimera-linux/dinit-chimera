@@ -1,5 +1,6 @@
 # Set up cgroup mounts
 
 type       = scripted
-command    = /usr/libexec/dinit/early/cgroups.sh
+command    = ./early/scripts/cgroups.sh
+depends-on = init-env
 depends-on = init-pseudofs

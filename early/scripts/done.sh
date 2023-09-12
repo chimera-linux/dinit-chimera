@@ -3,7 +3,9 @@
 # tries to commit machine-id to disk to mark boot done
 #
 
-export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+DINIT_SERVICE=done
+
+. ./early/scripts/common.sh
 
 # was never bind-mounted, so just exit
 mountpoint -q /etc/machine-id || exit 0

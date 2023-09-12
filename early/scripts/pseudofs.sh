@@ -1,6 +1,8 @@
 #!/bin/sh
 
-export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+DINIT_SERVICE=pseudofs
+
+. ./early/scripts/common.sh
 
 set -e
 

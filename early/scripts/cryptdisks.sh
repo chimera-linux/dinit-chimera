@@ -1,6 +1,10 @@
 #!/bin/sh
 
-[ -e /run/dinit/container ] && exit 0
+DINIT_SERVICE="cryptdisks-${1:-unknown}"
+DINIT_NO_CONTAINER=1
+
+. ./early/scripts/common.sh
+
 [ -r /usr/lib/cryptsetup/cryptdisks-functions ] || exit 0
 [ -r /etc/crypttab ] || exit 0
 

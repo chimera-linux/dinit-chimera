@@ -1,6 +1,8 @@
 #!/bin/sh
 
-export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+DINIT_SERVICE=tmpfiles
+
+. ./early/scripts/common.sh
 
 systemd-tmpfiles "$@"
 

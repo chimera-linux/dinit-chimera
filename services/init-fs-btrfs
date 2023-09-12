@@ -1,5 +1,5 @@
 # btrfs setup
 
 type       = scripted
-command    = /usr/libexec/dinit/early/fs-btrfs.sh
+command    = ./early/scripts/fs-btrfs.sh
 depends-on = init-fs-pre.target

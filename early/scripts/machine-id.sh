@@ -3,8 +3,11 @@
 # prepares a valid machine-id until it can be written to disk (maybe never)
 #
 
-export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+DINIT_SERVICE=machine-id
 
+. ./early/scripts/common.sh
+
+set -e
 umask 022
 
 gen_machineid() {

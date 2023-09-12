@@ -1,5 +1,6 @@
 # zfs setup
 
 type       = scripted
-command    = /usr/libexec/dinit/early/fs-zfs.sh
+command    = ./early/scripts/fs-zfs.sh
 depends-on = init-fs-pre.target
+options    = starts-on-console

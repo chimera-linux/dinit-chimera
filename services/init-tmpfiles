@@ -1,6 +1,6 @@
 # Create volatile files and directories
 
 type       = scripted
-command    = /usr/libexec/dinit/early/tmpfiles.sh --create --remove --boot --exclude-prefix=/dev
+command    = ./early/scripts/tmpfiles.sh --create --remove --boot --exclude-prefix=/dev
 depends-on = init-fs-local.target
 depends-on = init-done.target

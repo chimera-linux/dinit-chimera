@@ -1,8 +1,9 @@
 #!/bin/sh
 
-export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+DINIT_SERVICE=root-rw
+DINIT_NO_CONTAINER=1
 
-[ -e /run/dinit/container ] && exit 0
+. ./early/scripts/common.sh
 
 # do not remount as rw if the intent is to stay as ro
 if [ -r /etc/fstab ]; then
@@ -15,4 +16,4 @@ if [ -r /etc/fstab ]; then
     done
 fi
 
-mount -o remount,rw /
+exec mount -o remount,rw /

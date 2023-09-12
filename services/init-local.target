@@ -1,6 +1,6 @@
 # rc.local has been run
 
 type       = scripted
-command    = /usr/libexec/dinit/early/local.sh
+command    = ./early/scripts/local.sh
 depends-on = init-done.target
 depends-on = init-tmpfiles

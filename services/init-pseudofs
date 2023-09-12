@@ -1,5 +1,6 @@
 # Mount pseudo-filesystems such as /proc
 
 type       = scripted
-command    = /usr/libexec/dinit/early/pseudofs.sh
-depends-on = init-root-ro
+command    = ./early/scripts/pseudofs.sh
+depends-on = init-env
+depends-on = init-root-remount

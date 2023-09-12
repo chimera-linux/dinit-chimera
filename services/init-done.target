@@ -1,7 +1,7 @@
 # core system init has been done
 
 type       = scripted
-command    = /usr/libexec/dinit/early/done.sh
+command    = ./early/scripts/done.sh
 depends-on = init-fs-local.target
 depends-on = init-console.target
 depends-on = init-net-lo

@@ -2,5 +2,5 @@
 # Load them by looking at the output of `kmod static-nodes`
 
 type       = scripted
-command    = /usr/libexec/dinit/early/modules-early.sh
+command    = ./early/scripts/modules-early.sh
 depends-on = init-prepare.target

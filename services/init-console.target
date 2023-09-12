@@ -2,7 +2,7 @@
 # needs access to tmpfs and writable filesystem
 
 type       = scripted
-command    = /usr/libexec/dinit/early/setupcon.sh
+command    = ./early/scripts/console.sh
 depends-on = init-devices.target
 depends-on = init-fs-local.target
 depends-on = init-keyboard.target

@@ -1,5 +1,5 @@
 # set up the hostname
 
 type       = scripted
-command    = /usr/libexec/dinit/early/hostname.sh
+command    = ./early/scripts/hostname.sh
 depends-on = init-devices.target

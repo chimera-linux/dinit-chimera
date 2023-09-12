@@ -1,5 +1,5 @@
 # Load kernel modules from /etc/modules
 
 type       = scripted
-command    = /usr/libexec/dinit/early/modules.sh
+command    = ./early/scripts/modules.sh
 depends-on = init-modules-early

@@ -1,7 +1,7 @@
 # Check auxiliary filesystems
 
 type       = scripted
-command    = /usr/libexec/dinit/early/fs-fsck.sh
+command    = ./early/scripts/fs-fsck.sh
 depends-on = init-fs-pre.target
-depends-on = init-fs-btrfs
+waits-for  = init-fs-btrfs
 options    = starts-on-console

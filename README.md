@@ -12,7 +12,7 @@ Currently the documentation for the suite is lacking, which is also to be done.
 
 ## Dependencies
 
-* [dinit](https://github.com/davmac314/dinit) (0.17+)
+* [dinit](https://github.com/davmac314/dinit) (b74c5266fd2c7fbe64cdf7c93024bffe1f9365ff or newer)
 * [chimerautils](https://github.com/chimera-linux/chimerautils) or GNU coreutils
 * `awk` (POSIX will do)
 * [kmod](https://git.kernel.org/pub/scm/utils/kernel/kmod/kmod.git)

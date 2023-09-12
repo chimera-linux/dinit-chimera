@@ -1,8 +1,11 @@
 #!/bin/sh
 
-[ -x /usr/bin/fsck ] || exit 0
+DINIT_SERVICE=fs-fsck
+DINIT_NO_CONTAINER=1
 
-export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+. ./early/scripts/common.sh
+
+command -v fsck > /dev/null 2>&1 || exit 0
 
 FORCEARG=
 FIXARG="-a"

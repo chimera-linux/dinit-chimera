@@ -1,8 +1,9 @@
 #!/bin/sh
 
-export PATH=/sbin:/bin:/usr/sbin:/usr/bin
+DINIT_SERVICE=modules-early
+DINIT_NO_CONTAINER=1
 
-[ -e /run/dinit/container ] && exit 0
+. ./early/scripts/common.sh
 
 for f in $(kmod static-nodes 2> /dev/null | awk '/Module/ {print $2}'); do
     modprobe -bq "$f" 2> /dev/null

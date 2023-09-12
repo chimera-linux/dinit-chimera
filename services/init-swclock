@@ -1,8 +1,9 @@
 # Adjust system date/time as necessary by timestamp/rtc
 
 type         = scripted
-command      = /usr/libexec/dinit/early/clock.sh swclock start
-stop-command = /usr/libexec/dinit/early/clock.sh swclock stop
+command      = ./early/scripts/clock.sh swclock start
+stop-command = ./early/scripts/clock.sh swclock stop
 depends-on   = init-udevd
 depends-on   = init-prepare.target
+depends-on   = init-root-rw.target
 waits-for    = init-hwclock

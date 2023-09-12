@@ -1,6 +1,7 @@
 # Earliest system bringup target
 
 type       = internal
+depends-on = init-env
 depends-on = init-pseudofs
 depends-on = init-tmpfs
 depends-on = init-cgroups

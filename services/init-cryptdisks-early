@@ -1,7 +1,7 @@
 # crypt devices not dependent on lvm
 
 type       = scripted
-command    = /usr/libexec/dinit/early/cryptdisks.sh early start
+command    = ./early/scripts/cryptdisks.sh early start
 depends-on = init-devices.target
 depends-on = init-keyboard.target
 depends-on = init-dmraid
