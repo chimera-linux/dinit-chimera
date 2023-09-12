@@ -8,3 +8,4 @@ depends-on = init-dmraid
 depends-on = init-mdadm
 depends-on = init-lvm
 depends-ms = init-root-fsck
+options    = starts-on-console
