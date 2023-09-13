@@ -1,6 +1,3 @@
-# rc.local has been run
-
-type       = scripted
-command    = ./early/scripts/local.sh
-depends-on = init-done.target
-depends-on = init-tmpfiles
+# deprecated
+type        = internal
+depends-on  = local.target

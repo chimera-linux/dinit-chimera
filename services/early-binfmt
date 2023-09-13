@@ -1,0 +1,7 @@
+# Set up configured binary format handlers
+
+type         = scripted
+command      = ./early/scripts/binfmt.sh start
+stop-command = ./early/scripts/binfmt.sh stop
+depends-on   = early-fs-local.target
+depends-on   = init-fs-local.target

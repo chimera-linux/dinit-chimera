@@ -1,7 +1,0 @@
-# Check auxiliary filesystems
-
-type       = scripted
-command    = ./early/scripts/fs-fsck.sh
-depends-on = init-fs-pre.target
-waits-for  = init-fs-btrfs
-options    = starts-on-console

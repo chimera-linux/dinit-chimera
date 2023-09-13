@@ -1,0 +1,6 @@
+# Set up cgroup mounts
+
+type       = scripted
+command    = ./early/scripts/cgroups.sh
+depends-on = early-env
+depends-on = early-pseudofs

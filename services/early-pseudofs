@@ -1,0 +1,6 @@
+# Mount pseudo-filesystems such as /proc
+
+type       = scripted
+command    = ./early/scripts/pseudofs.sh
+depends-on = early-env
+depends-on = early-root-remount

@@ -1,5 +1,0 @@
-# set up the loopback interface
-
-type       = scripted
-command    = ./early/scripts/net-lo.sh
-depends-on = init-devices.target

@@ -1,0 +1,8 @@
+# Reached just before filesystems are checked and mounted
+
+type       = internal
+depends-on = early-devices.target
+depends-on = init-devices.target
+depends-on = early-cryptdisks
+depends-on = early-dmraid
+depends-on = early-mdadm

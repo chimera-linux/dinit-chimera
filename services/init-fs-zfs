@@ -1,6 +1,0 @@
-# zfs setup
-
-type       = scripted
-command    = ./early/scripts/fs-zfs.sh
-depends-on = init-fs-pre.target
-options    = starts-on-console

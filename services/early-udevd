@@ -1,0 +1,9 @@
+# A scripted service that runs early udevd that is not supervised, later
+# replaced with a real supervised service once everything else is up
+
+type         = scripted
+command      = ./early/scripts/udev.sh start
+stop-command = ./early/scripts/udev.sh stop
+depends-on   = early-prepare.target
+depends-on   = early-modules-early
+depends-on   = early-tmpfiles-dev

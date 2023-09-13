@@ -1,0 +1,5 @@
+# Remount root filesystem (usually read-only)
+
+type       = scripted
+command    = ./early/scripts/root-remount.sh
+depends-on = early-env

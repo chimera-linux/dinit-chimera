@@ -1,0 +1,7 @@
+# Earliest system bringup target
+
+type       = internal
+depends-on = early-env
+depends-on = early-pseudofs
+depends-on = early-tmpfs
+depends-on = early-cgroups

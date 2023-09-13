@@ -1,0 +1,7 @@
+# Mount some early temp filesystems
+
+type       = scripted
+command    = ./early/scripts/tmpfs.sh
+depends-on = early-env
+depends-on = early-root-remount
+options    = pass-cs-fd

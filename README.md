@@ -50,31 +50,31 @@ general your services should specify dependency links and ordering links
 for every target that is relevant to your functionality (i.e. you should
 not rely on transitive dependencies excessively). This does not apply
 to very early oneshots that are guaranteed to have run, i.e. in most cases
-services should not have to depend on `init-prepare.target` and so on.
+services should not have to depend on `early-prepare.target` and so on.
 
-* `init-prepare.target` - early pseudo-filesystems have been mounted
-* `init-modules.target` - kernel modules from `/etc/modules` have been loaded
-* `init-devices.target` - device events have been processed
+* `early-prepare.target` - early pseudo-filesystems have been mounted
+* `early-modules.target` - kernel modules from `/etc/modules` have been loaded
+* `early-devices.target` - device events have been processed
   * This means `/dev` is fully populated with quirks applied and so on.
-* `init-keyboard.target` - console keymap has been set
+* `early-keyboard.target` - console keymap has been set
   * This has no effect when `setupcon` from `console-setup` is not available.
-* `init-fs-pre.target` - filesystems are ready to be checked and mounted
+* `early-fs-pre.target` - filesystems are ready to be checked and mounted
   * This means encrypted disks, RAID, LVM and so on is up.
-* `init-root-rw.target` - root filesystem has been re-mounted read/write.
+* `early-root-rw.target` - root filesystem has been re-mounted read/write.
   * That is, unless `fstab` explicitly specifies it should be read-only.
-* `init-fs-fstab.target` - non-network filesystems in `fstab` have been mounted
-* `init-fs-local.target` - non-network filesystems have finished mounting
+* `early-fs-fstab.target` - non-network filesystems in `fstab` have been mounted
+* `early-fs-local.target` - non-network filesystems have finished mounting
   * This includes the above plus non-`fstab` filesystems such as ZFS.
-* `init-console.target` - follow-up to `init-keyboard.target` (console font, etc.)
+* `early-console.target` - follow-up to `early-keyboard.target` (console font, etc.)
   * This has no effect when `setupcon` from `console-setup` is not available.
-* `init-done.target` - most important early oneshots have fun.
+* `pre-local.target` - most important early oneshots have run.
   * Temporary/volatile files/dirs managed with `tmpfiles.d` are not guaranteed yet.
-  * Most services should prefer `init-local.target` as their sentinel.
+  * Most services should prefer `local.target` as their sentinel.
   * Typically only for services that should guarantee being up before `rc.local` is run.
   * All targets above this one are guaranteed to have been reached.
-* `init-local.target` - `/etc/rc.local` has run and temp/volatile files/dirs are created
-  * Implies `init-done.target`.
-  * Most regular services should depend on at least this one (or `init-done.target`).
+* `local.target` - `/etc/rc.local` has run and temp/volatile files/dirs are created
+  * Implies `pre-local.target`.
+  * Most regular services should depend on at least this one (or `pre-local.target`).
 * `pre-network.target` - networking daemons may start.
   * This means things such as firewall have been brought up.
 * `network.target` - networking daemons have started.
@@ -86,3 +86,12 @@ services should not have to depend on `init-prepare.target` and so on.
   * Things such as NTP implementations should wait and use this as `before`.
   * Things requiring date/time to be set should use this as a dependency.
   * This may take a while, so pre-login services depending on this may stall the boot.
+
+These names are legacy and will be removed:
+
+* `init-done.target` - `pre-local.target`
+* `init-local.target` - `local.target`
+* `init-devices.target` - `early-devices.target`
+* `init-fs-local.target` - `early-fs-local.target`
+* `init-fs-pre.target` - `early-fs-pre.target`
+* `init-root-rw.target` - `early-root-rw.target`

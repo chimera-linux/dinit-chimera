@@ -1,6 +1,0 @@
-# set up the sysctls
-
-type       = scripted
-command    = ./early/scripts/sysctl.sh
-depends-on = init-devices.target
-depends-on = init-fs-local.target

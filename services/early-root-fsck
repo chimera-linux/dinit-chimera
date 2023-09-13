@@ -1,0 +1,9 @@
+# Check the root filesystem, interruptible with ^C
+
+type          = scripted
+command       = ./early/scripts/root-fsck.sh
+start-timeout = 0 # unlimited
+depends-on    = early-prepare.target
+depends-ms    = early-udevd
+waits-for     = early-udev-trigger
+options       = starts-on-console pass-cs-fd start-interruptible skippable

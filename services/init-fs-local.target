@@ -1,8 +1,3 @@
-# All non-network filesystems have been mounted
-
-type       = internal
-depends-on = init-fs-pre.target
-waits-for  = init-fs-btrfs
-waits-for  = init-fs-zfs
-waits-for  = init-root-rw.target
-waits-for  = init-fs-fstab.target
+# deprecated
+type        = internal
+depends-on  = early-fs-local.target

@@ -1,6 +1,0 @@
-# mdadm setup
-
-type       = scripted
-command    = ./early/scripts/mdadm.sh
-depends-on = init-devices.target
-depends-ms = init-root-fsck
