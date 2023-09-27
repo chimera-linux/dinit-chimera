@@ -6,11 +6,14 @@
 
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
+# assume proper directory
+cd /usr/lib/dinit.d
+
 if [ ! -e /run/dinit/container ]; then
     echo "Disabling swap..."
     swapoff -a
     echo "Unmounting filesystems..."
-    /usr/libexec/dinit/early/fs-fstab.sh stop
+    /usr/lib/dinit.d/early/scripts/fs-fstab.sh stop
     echo "Remounting root read-only..."
     mount -n -o remount,ro /
 fi
@@ -20,9 +23,9 @@ sync
 if [ ! -e /run/dinit/container ]; then
     export DM_DISABLE_UDEV=1
     echo "Deactivating cryptdisks..."
-    /usr/libexec/dinit/early/cryptdisks.sh remaining stop
+    /usr/lib/dinit.d/early/scripts/cryptdisks.sh remaining stop
     echo "Deactivating volume groups..."
-    /usr/libexec/dinit/early/lvm.sh stop
+    /usr/lib/dinit.d/early/scripts/lvm.sh stop
     echo "Deactivating remaining cryptdisks..."
-    /usr/libexec/dinit/early/cryptdisks.sh early stop
+    /usr/lib/dinit.d/early/scripts/cryptdisks.sh early stop
 fi
