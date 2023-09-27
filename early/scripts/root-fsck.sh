@@ -44,9 +44,20 @@ fi
 
 ROOTDEV=`findmnt -v -o SOURCE -n -M /`
 
+# e.g. zfs will not report a valid block device
+[ -n "$ROOTDEV" -a -b "$ROOTDEV" ] || exit 0
+
+ROOTFSTYPE=`blkid -o value -s TYPE "$ROOTDEV"`
+
+# ensure it's a known filesystem
+[ -n "$ROOTFSTYPE" ] || exit 0
+
+# ensure we have a fsck for it
+command -v "fsck.$ROOTFSTYPE" > /dev/null 2>&1 || exit 0
+
 echo "Checking root file system (^C to skip)..."
 
-fsck -C $FORCEARG $FIXARG "$ROOTDEV"
+fsck -C $FORCEARG $FIXARG -t "$ROOTFSTYPE" "$ROOTDEV"
 
 # it's a bitwise-or, but we are only checking one filesystem
 case $? in
