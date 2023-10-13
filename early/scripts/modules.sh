@@ -8,9 +8,6 @@ DINIT_NO_CONTAINER=1
 # no modules support
 [ -e /proc/modules ] || exit 0
 
-# no modules file
-[ -r /etc/modules ] || exit 0
-
 {
     # Parameters passed as modules-load= or rd.modules-load= in kernel command line.
     sed -nr 's/,/\n/g;s/(.* |^)(rd\.)?modules-load=([^ ]*).*/\3/p' /proc/cmdline
