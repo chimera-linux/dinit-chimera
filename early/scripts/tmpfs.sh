@@ -7,7 +7,7 @@ DINIT_SERVICE=tmpfs
 umask 022
 set -e
 
-mountpoint -q /run || mount -o mode=0755,nosuid,nodev -t tmpfs run /run
+./early/helpers/mntpt /run || mount -o mode=0755,nosuid,nodev -t tmpfs run /run
 
 # readable system state
 mkdir -p /run/dinit

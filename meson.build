@@ -21,6 +21,7 @@ helpers = [
     ['hwclock', ['early/helpers/hwclock.c']],
     ['swclock', ['early/helpers/swclock.c']],
     ['lo',      ['early/helpers/lo.c']],
+    ['mntpt',   ['early/helpers/mntpt.c']],
     ['seedrng', ['early/helpers/seedrng.c']],
     ['sysctl',  ['early/helpers/sysctl.cc']],
 ]

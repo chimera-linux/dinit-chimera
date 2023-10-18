@@ -42,7 +42,7 @@ if [ -r /etc/fstab ]; then
     fi
 fi
 
-ROOTPAM=$(awk '{OFS=":";if ($2 == "/") print $1,$3;}' /proc/mounts)
+ROOTPAM=$(awk '{OFS=":";if ($2 == "/") print $1,$3;}' /proc/self/mounts)
 
 ROOTDEV=${ROOTPAM%:*}
 # e.g. zfs will not report a valid block device

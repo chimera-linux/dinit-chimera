@@ -1,6 +1,7 @@
 #!/bin/sh
 
 DINIT_SERVICE=hostname
+DINIT_NO_CONTAINER=1
 
 . ./early/scripts/common.sh
 

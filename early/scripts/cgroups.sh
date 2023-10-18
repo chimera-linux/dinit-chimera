@@ -8,4 +8,4 @@ set -e
 . ./early/scripts/common.sh
 
 mkdir -p "/sys/fs/cgroup"
-mountpoint -q "/sys/fs/cgroup" || mount -t cgroup2 -o nsdelegate cgroup2 "/sys/fs/cgroup"
+./early/helpers/mntpt "/sys/fs/cgroup" || mount -t cgroup2 -o nsdelegate cgroup2 "/sys/fs/cgroup"

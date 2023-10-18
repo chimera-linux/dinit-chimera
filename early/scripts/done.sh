@@ -8,7 +8,7 @@ DINIT_SERVICE=done
 . ./early/scripts/common.sh
 
 # was never bind-mounted, so just exit
-mountpoint -q /etc/machine-id || exit 0
+./early/helpers/mntpt /etc/machine-id || exit 0
 # no generated machine-id
 test -e /run/dinit/machine-id || exit 0
 
