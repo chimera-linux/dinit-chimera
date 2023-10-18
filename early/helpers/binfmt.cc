@@ -59,6 +59,7 @@ static int binfmt_fd = -1;
 /* search paths for conf files */
 static char const *paths[] = {
     "/etc/binfmt.d",
+    "/run/binfmt.d",
     "/usr/local/lib/binfmt.d",
     "/usr/lib/binfmt.d",
     nullptr
