@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    fclose(sf);
+    endmntent(sf);
     free(path);
     return retval;
 }

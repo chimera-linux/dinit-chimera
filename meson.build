@@ -24,6 +24,7 @@ helpers = [
     ['mntpt',   ['early/helpers/mntpt.c']],
     ['seedrng', ['early/helpers/seedrng.c']],
     ['sysctl',  ['early/helpers/sysctl.cc']],
+    ['swap',    ['early/helpers/swap.c']],
 ]
 
 foreach helper: helpers

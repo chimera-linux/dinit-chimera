@@ -19,7 +19,7 @@ Currently the documentation for the suite is lacking, which is also to be done.
 * `awk` (POSIX will do)
 * [kmod](https://git.kernel.org/pub/scm/utils/kernel/kmod/kmod.git)
 * [util-linux](https://mirrors.edge.kernel.org/pub/linux/utils/util-linux)
-  * Just portions of it (`fsck`, `mount`, `swapon`)
+  * Just portions of it (`fsck`, `mount`)
 * `sulogin` (any implementation)
 * `systemd-udev` (`eudev` will work with some path changes)
 * `systemd-tmpfiles` (for now, a builtin implementation is planned)
