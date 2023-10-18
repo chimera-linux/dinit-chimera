@@ -13,11 +13,13 @@ Currently the documentation for the suite is lacking, which is also to be done.
 ## Dependencies
 
 * [dinit](https://github.com/davmac314/dinit) (b74c5266fd2c7fbe64cdf7c93024bffe1f9365ff or newer)
-* [chimerautils](https://github.com/chimera-linux/chimerautils) or GNU coreutils
+* Basic core utilities
+  * [chimerautils](https://github.com/chimera-linux/chimerautils) is most tested
+  * GNU coreutils, busybox etc. may work (patches welcome)
 * `awk` (POSIX will do)
 * [kmod](https://git.kernel.org/pub/scm/utils/kernel/kmod/kmod.git)
 * [util-linux](https://mirrors.edge.kernel.org/pub/linux/utils/util-linux)
-  * Just portions of it (`fsck`, `findmnt`, `blkid`, `mount`, `mountpoint`, `swapon`)
+  * Just portions of it (`fsck`, `mount`, `mountpoint`, `swapon`)
 * `sulogin` (any implementation)
 * `systemd-udev` (`eudev` will work with some path changes)
 * `systemd-tmpfiles` (for now, a builtin implementation is planned)

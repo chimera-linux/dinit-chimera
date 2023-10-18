@@ -42,13 +42,13 @@ if [ -r /etc/fstab ]; then
     fi
 fi
 
-ROOTDEV=`findmnt -v -o SOURCE -n -M /`
+ROOTPAM=$(OFS=":";awk '{if ($2 == "/") print $1,$3;}' /proc/mounts)
 
+ROOTDEV=${ROOTPAM%:*}
 # e.g. zfs will not report a valid block device
 [ -n "$ROOTDEV" -a -b "$ROOTDEV" ] || exit 0
 
-ROOTFSTYPE=`blkid -o value -s TYPE "$ROOTDEV"`
-
+ROOTFSTYPE=${ROOTPAM#*:}
 # ensure it's a known filesystem
 [ -n "$ROOTFSTYPE" ] || exit 0
 
