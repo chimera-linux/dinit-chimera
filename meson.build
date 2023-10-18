@@ -22,6 +22,7 @@ helpers = [
     ['swclock', ['early/helpers/swclock.c']],
     ['lo',      ['early/helpers/lo.c']],
     ['seedrng', ['early/helpers/seedrng.c']],
+    ['sysctl',  ['early/helpers/sysctl.cc']],
 ]
 
 foreach helper: helpers

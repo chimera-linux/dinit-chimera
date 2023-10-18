@@ -28,8 +28,6 @@ Not having these dependencies will allow the boot to proceed, but specific
 functionality will not work. Generally the affected oneshots will simply
 exit with success if the tools aren't located.
 
-* [procps](https://gitlab.com/procps-ng/procps)
-  * For `sysctl` setup
 * [console-setup](https://salsa.debian.org/installer-team/console-setup)
   * For console keymap, font and so on.
 * [mdadm](https://git.kernel.org/pub/scm/utils/mdadm/mdadm.git)
