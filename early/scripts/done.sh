@@ -4,6 +4,8 @@
 #
 
 DINIT_SERVICE=done
+# the mount test would fail, might as well just skip it altogether
+DINIT_NO_CONTAINER=1
 
 . ./early/scripts/common.sh
 

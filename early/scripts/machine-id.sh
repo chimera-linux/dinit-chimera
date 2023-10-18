@@ -30,6 +30,11 @@ fi
 
 # if we generated one, bind-mount it over the real file
 if [ -e /run/dinit/machine-id -a -e /etc/machine-id ]; then
+    # containers can't mount but might have a mutable fs
+    if [ -n "$DINIT_CONTAINER" ]; then
+        cat /run/dinit/machine-id > /etc/machine-id
+        exit 0
+    fi
     mount --bind /run/dinit/machine-id /etc/machine-id
 fi
 
