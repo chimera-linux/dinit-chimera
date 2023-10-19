@@ -35,7 +35,7 @@ if [ -e /run/dinit/machine-id -a -e /etc/machine-id ]; then
         cat /run/dinit/machine-id > /etc/machine-id
         exit 0
     fi
-    mount --bind /run/dinit/machine-id /etc/machine-id
+    mount -t none -o bind /run/dinit/machine-id /etc/machine-id
 fi
 
 exit 0

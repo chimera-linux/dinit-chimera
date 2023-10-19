@@ -16,11 +16,12 @@ Currently the documentation for the suite is lacking, which is also to be done.
 * Basic core utilities
   * [chimerautils](https://github.com/chimera-linux/chimerautils) is most tested
   * GNU coreutils, busybox etc. may work (patches welcome)
+* POSIX shell
 * `awk` (POSIX will do)
 * `modprobe`
   * Must have blacklist support
-* `mount`
-  * Currently needs `util-linux` implementation
+* `mount`, `umount`
+  * Implementation must support `-a`
 * `sulogin` (any implementation)
 * `systemd-udev` (`eudev` will work with some path changes)
 * `systemd-tmpfiles` (for now, a builtin implementation is planned)
