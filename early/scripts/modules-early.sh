@@ -5,6 +5,9 @@ DINIT_NO_CONTAINER=1
 
 . ./early/scripts/common.sh
 
-for f in $(kmod static-nodes 2> /dev/null | awk '/Module/ {print $2}'); do
+MODFILE=/lib/modules/$(uname -r)/modules.devname
+[ -r "$MODFILE" ] || exit 0
+
+for f in $(awk '/^[^#]/ {print $1}' "$MODFILE"); do
     modprobe -bq "$f" 2> /dev/null
 done

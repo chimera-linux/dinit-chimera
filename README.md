@@ -17,9 +17,10 @@ Currently the documentation for the suite is lacking, which is also to be done.
   * [chimerautils](https://github.com/chimera-linux/chimerautils) is most tested
   * GNU coreutils, busybox etc. may work (patches welcome)
 * `awk` (POSIX will do)
-* [kmod](https://git.kernel.org/pub/scm/utils/kernel/kmod/kmod.git)
-* [util-linux](https://mirrors.edge.kernel.org/pub/linux/utils/util-linux)
-  * Just portions of it (`fsck`, `mount`)
+* `modprobe`
+  * Must have blacklist support
+* `mount`
+  * Currently needs `util-linux` implementation
 * `sulogin` (any implementation)
 * `systemd-udev` (`eudev` will work with some path changes)
 * `systemd-tmpfiles` (for now, a builtin implementation is planned)
@@ -30,6 +31,9 @@ Not having these dependencies will allow the boot to proceed, but specific
 functionality will not work. Generally the affected oneshots will simply
 exit with success if the tools aren't located.
 
+* `fsck`
+  * Without it, early file system checks won't be available
+  * Tested with `util-linux`, others may work
 * [console-setup](https://salsa.debian.org/installer-team/console-setup)
   * For console keymap, font and so on.
 * [mdadm](https://git.kernel.org/pub/scm/utils/mdadm/mdadm.git)
