@@ -3,6 +3,4 @@
 type       = scripted
 command    = ./early/scripts/tmpfiles.sh --create --remove --boot --exclude-prefix=/dev
 depends-on = early-fs-local.target
-depends-on = init-fs-local.target
 depends-on = pre-local.target
-depends-on = init-done.target

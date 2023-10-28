@@ -3,5 +3,4 @@
 type       = scripted
 command    = ./early/scripts/mdadm.sh
 depends-on = early-devices.target
-depends-on = init-devices.target
 depends-ms = early-root-fsck

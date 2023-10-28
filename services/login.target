@@ -2,5 +2,4 @@
 
 type       = internal
 depends-on = local.target
-depends-on = init-local.target
 options    = runs-on-console

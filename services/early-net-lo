@@ -3,4 +3,3 @@
 type       = scripted
 command    = ./early/scripts/net-lo.sh
 depends-on = early-devices.target
-depends-on = init-devices.target

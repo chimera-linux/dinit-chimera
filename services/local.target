@@ -3,5 +3,4 @@
 type       = scripted
 command    = ./early/scripts/local.sh
 depends-on = pre-local.target
-depends-on = init-done.target
 depends-on = early-tmpfiles

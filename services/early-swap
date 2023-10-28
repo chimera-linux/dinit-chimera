@@ -3,4 +3,3 @@
 type       = scripted
 command    = ./early/scripts/swap.sh start
 depends-on = early-fs-local.target
-depends-on = init-fs-local.target

@@ -5,4 +5,3 @@ command    = ./early/scripts/machine-id.sh
 depends-on = early-rng
 depends-on = early-swclock
 waits-for  = early-root-rw.target
-waits-for  = init-root-rw.target

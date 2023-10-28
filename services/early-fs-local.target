@@ -2,9 +2,7 @@
 
 type       = internal
 depends-on = early-fs-pre.target
-depends-on = init-fs-pre.target
 waits-for  = early-fs-btrfs
 waits-for  = early-fs-zfs
 waits-for  = early-root-rw.target
-waits-for  = init-root-rw.target
 waits-for  = early-fs-fstab.target

@@ -6,5 +6,4 @@ stop-command = ./early/scripts/clock.sh swclock stop
 depends-on   = early-udevd
 depends-on   = early-prepare.target
 depends-on   = early-root-rw.target
-depends-on   = init-root-rw.target
 waits-for    = early-hwclock

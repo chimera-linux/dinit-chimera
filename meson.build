@@ -36,7 +36,7 @@ foreach helper: helpers
 endforeach
 
 manpages = [
-    'init-modules.target.8'
+    'early-modules.target.8'
 ]
 
 foreach manp: manpages
@@ -134,13 +134,6 @@ services = [
     'single',
     'system',
     'time-sync.target',
-    # deprecated names
-    'init-done.target',
-    'init-local.target',
-    'init-devices.target',
-    'init-fs-local.target',
-    'init-fs-pre.target',
-    'init-root-rw.target',
 ]
 
 foreach srv: services

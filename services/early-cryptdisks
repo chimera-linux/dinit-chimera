@@ -3,7 +3,6 @@
 type       = scripted
 command    = ./early/scripts/cryptdisks.sh remaining start
 depends-on = early-devices.target
-depends-on = init-devices.target
 depends-on = early-cryptdisks-early
 depends-on = early-dmraid
 depends-on = early-mdadm

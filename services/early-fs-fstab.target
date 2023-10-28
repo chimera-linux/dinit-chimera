@@ -3,9 +3,7 @@
 type       = scripted
 command    = ./early/scripts/fs-fstab.sh start
 depends-on = early-fs-pre.target
-depends-on = init-fs-pre.target
 waits-for  = early-fs-zfs
 waits-for  = early-fs-btrfs
 depends-ms = early-fs-fsck
 waits-for  = early-root-rw.target
-waits-for  = init-root-rw.target

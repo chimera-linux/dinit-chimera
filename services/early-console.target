@@ -4,7 +4,5 @@
 type       = scripted
 command    = ./early/scripts/console.sh
 depends-on = early-devices.target
-depends-on = init-devices.target
 depends-on = early-fs-local.target
-depends-on = init-fs-local.target
 depends-on = early-keyboard.target
