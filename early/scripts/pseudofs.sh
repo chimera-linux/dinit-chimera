@@ -21,6 +21,11 @@ mkdir -p -m0755 /dev/pts /dev/shm
 mntpt /dev/pts || mount -o mode=0620,gid=5,nosuid,noexec -n -t devpts devpts /dev/pts
 mntpt /dev/shm || mount -o mode=1777,nosuid,nodev -n -t tmpfs shm /dev/shm
 
+[ -h /dev/fd ] || ln -s /proc/self/fd /dev/fd
+[ -h /dev/stdin ] || ln -s /proc/self/fd/0 /dev/stdin
+[ -h /dev/stdout ] || ln -s /proc/self/fd/1 /dev/stdout
+[ -h /dev/stderr ] || ln -s /proc/self/fd/2 /dev/stderr
+
 if [ -d /sys/kernel/security ]; then
     mntpt /sys/kernel/security || mount -n -t securityfs securityfs /sys/kernel/security
 fi
