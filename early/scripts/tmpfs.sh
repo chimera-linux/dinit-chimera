@@ -7,10 +7,35 @@ DINIT_SERVICE=tmpfs
 umask 022
 set -e
 
-./early/helpers/mntpt /run || mount -o mode=0755,nosuid,nodev -t tmpfs run /run
+# default unset
+RUNSIZE=
+
+if [ -r /proc/cmdline ]; then
+    for x in $(cat /proc/cmdline); do
+        case "$x" in
+            # initramfs-tools compat
+            initramfs.runsize=*)
+                RUNSIZE="${x#initramfs.runsize=}"
+                ;;
+            dinit.runsize=*)
+                RUNSIZE="${x#dinit.runsize=}"
+                ;;
+        esac
+    done
+fi
+
+
+./early/helpers/mntpt /run || \
+    mount -o "nodev,noexec,nosuid,size=${RUNSIZE:-10%},mode=0755" -t tmpfs none /run
 
 # readable system state
-mkdir -p /run/dinit
+mkdir -p /run/dinit /run/user
+
+# mount /run/user at this point, should *not* be noexec (breaks some flatpaks)
+# give it the same max size as /run itself, generally it should be tiny so
+# it does not need the 50% default at any point
+./early/helpers/mntpt /run/user || \
+    mount -o "nodev,nosuid,size=${RUNSIZE:-10%},mode=0755" -t tmpfs none /run/user
 
 # now that we a /run, expose container as state file too (for shutdown etc)
 if [ -n "$DINIT_CONTAINER" ]; then
