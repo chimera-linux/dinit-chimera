@@ -16,7 +16,7 @@ if [ -r /etc/initramfs-tools/initramfs.conf ]; then
     for conf in /etc/initramfs-tools/conf.d/*; do
         [ -f "$conf" ] && . "$conf"
     done
-done
+fi
 
 # overrides via kernel cmdline
 if [ -r /proc/cmdline ]; then
