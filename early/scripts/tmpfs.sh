@@ -10,6 +10,15 @@ set -e
 # default unset
 RUNSIZE=
 
+# if initramfs-tools is used, source its configs for consistent runsize
+if [ -r /etc/initramfs-tools/initramfs.conf ]; then
+    . /etc/initramfs-tools/initramfs.conf
+    for conf in /etc/initramfs-tools/conf.d/*; do
+        [ -f "$conf" ] && . "$conf"
+    done
+done
+
+# overrides via kernel cmdline
 if [ -r /proc/cmdline ]; then
     for x in $(cat /proc/cmdline); do
         case "$x" in
@@ -24,9 +33,10 @@ if [ -r /proc/cmdline ]; then
     done
 fi
 
+RUNSIZE="${RUNSIZE:-10%}"
 
 ./early/helpers/mntpt /run || \
-    mount -o "nodev,noexec,nosuid,size=${RUNSIZE:-10%},mode=0755" -t tmpfs none /run
+    mount -o "nodev,noexec,nosuid,size=${RUNSIZE},mode=0755" -t tmpfs none /run
 
 # readable system state
 mkdir -p /run/dinit /run/user
@@ -35,7 +45,7 @@ mkdir -p /run/dinit /run/user
 # give it the same max size as /run itself, generally it should be tiny so
 # it does not need the 50% default at any point
 ./early/helpers/mntpt /run/user || \
-    mount -o "nodev,nosuid,size=${RUNSIZE:-10%},mode=0755" -t tmpfs none /run/user
+    mount -o "nodev,nosuid,size=${RUNSIZE},mode=0755" -t tmpfs none /run/user
 
 # now that we a /run, expose container as state file too (for shutdown etc)
 if [ -n "$DINIT_CONTAINER" ]; then
