@@ -124,7 +124,6 @@ static int do_start(void) {
             }
         }
         devname = resolve_dev(m->mnt_fsname, devbuf, sizeof(devbuf));
-        printf("DEVN %s %s\n", m->mnt_fsname, devname);
         if (stat(devname, &st)) {
             warn("stat failed for '%s'", m->mnt_fsname);
             ret = 1;
