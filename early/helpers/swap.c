@@ -55,9 +55,29 @@ static int usage(char **argv) {
     return 1;
 }
 
+/* we must be able to resolve e.g. LABEL=swapname */
+static char const *resolve_dev(char const *raw, char *buf, size_t bufsz) {
+#define CHECK_PFX(name, lname) \
+    if (!strncmp(raw, name "=", sizeof(name))) { \
+        snprintf(buf, bufsz, "/dev/disk/by-" lname "/%s", raw + sizeof(name)); \
+        return buf; \
+    }
+
+    CHECK_PFX("LABEL", "label")
+    CHECK_PFX("UUID", "uuid")
+    CHECK_PFX("PARTLABEL", "partlabel")
+    CHECK_PFX("PARTUUID", "partuuid")
+    CHECK_PFX("ID", "id")
+
+    /* otherwise stat the input */
+    return raw;
+}
+
 static int do_start(void) {
     struct mntent *m;
     int ret = 0;
+    char devbuf[4096];
+    char const *devname;
     FILE *f = setmntent("/etc/fstab", "r");
     if (!f) {
         if (errno == ENOENT) {
@@ -103,7 +123,9 @@ static int do_start(void) {
                 }
             }
         }
-        if (stat(m->mnt_fsname, &st)) {
+        devname = resolve_dev(m->mnt_fsname, devbuf, sizeof(devbuf));
+        printf("DEVN %s %s\n", m->mnt_fsname, devname);
+        if (stat(devname, &st)) {
             warn("stat failed for '%s'", m->mnt_fsname);
             ret = 1;
             continue;
@@ -113,7 +135,7 @@ static int do_start(void) {
             ret = 1;
             continue;
         }
-        if (swapon(m->mnt_fsname, flags)) {
+        if (swapon(devname, flags)) {
             warn("swapon failed for '%s'", m->mnt_fsname);
             ret = 1;
             continue;
@@ -125,6 +147,8 @@ static int do_start(void) {
 
 static int do_stop(void) {
     int ret = 0;
+    char devbuf[4096];
+    char const *devname;
     /* first do /proc/swaps */
     FILE *f = fopen("/proc/swaps", "r");
     if (f) {
@@ -155,7 +179,8 @@ static int do_stop(void) {
             if (strcmp(m->mnt_type, "swap")) {
                 continue;
             }
-            if (swapoff(m->mnt_fsname) && (errno != EINVAL)) {
+            devname = resolve_dev(m->mnt_fsname, devbuf, sizeof(devbuf));
+            if (swapoff(devname) && (errno != EINVAL)) {
                 warn("swapoff failed for '%s'", m->mnt_fsname);
                 ret = 1;
             }
