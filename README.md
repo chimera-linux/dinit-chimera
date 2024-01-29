@@ -12,7 +12,7 @@ Currently the documentation for the suite is lacking, which is also to be done.
 
 ## Dependencies
 
-* [dinit](https://github.com/davmac314/dinit) (b74c5266fd2c7fbe64cdf7c93024bffe1f9365ff or newer)
+* [dinit](https://github.com/davmac314/dinit) (0.18.0 or newer)
 * Basic core utilities
   * [chimerautils](https://github.com/chimera-linux/chimerautils) is most tested
   * GNU coreutils, busybox etc. may work (patches welcome)
