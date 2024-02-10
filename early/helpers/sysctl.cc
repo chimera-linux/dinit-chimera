@@ -64,7 +64,7 @@ static void usage(FILE *f) {
     );
 }
 
-static bool load_sysctl(char *name, char *value) {
+static bool load_sysctl(char *name, char *value, bool opt) {
     /* first, replace dots with slashes to get a path; we cannot just
      * replace all dots because e.g. foo/bar.baz/xyz can be a valid path,
      * so instead try names from the end, repeating with dots replaced with
@@ -95,6 +95,10 @@ rep:
         if (errno == EACCES) {
             return true;
         }
+        /* optional stuff never fails anyhow */
+        if (opt) {
+            return true;
+        }
         /* unknown entries */
         if (errno == ENOENT) {
             for (;;) {
@@ -113,7 +117,7 @@ rep:
     }
     auto vlen = std::strlen(value);
     value[vlen] = '\n';
-    if (write(fd, value, vlen + 1) != ssize_t(vlen + 1)) {
+    if ((write(fd, value, vlen + 1) != ssize_t(vlen + 1)) && !opt) {
         warn("failed to set sysctl '%s'", name);
         return false;
     }
@@ -135,6 +139,12 @@ static bool load_conf(char const *s, char *&line, std::size_t &len) {
         }
         if ((*cline == '#') || (*cline == ';') || !*cline) {
             continue;
+        }
+        /* sysctls starting with - should not fail ever */
+        bool opt = (*cline == '-');
+        if (opt) {
+            /* disregard the dash once we know, it's not a part of the name */
+            ++cline;
         }
         /* strip trailing whitespace too once we are sure it's not empty */
         auto rl = std::strlen(line);
@@ -167,7 +177,7 @@ static bool load_conf(char const *s, char *&line, std::size_t &len) {
             ++svalue;
         }
         /* load the sysctl */
-        if (!load_sysctl(sname, svalue)) {
+        if (!load_sysctl(sname, svalue, opt)) {
             fret = false;
         }
     }
