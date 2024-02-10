@@ -9,8 +9,8 @@ DINIT_NO_CONTAINER=1
 [ -e /proc/modules ] || exit 0
 
 {
-    # Parameters passed as modules-load= or rd.modules-load= in kernel command line.
-    sed -nr 's/,/\n/g;s/(.* |^)(rd\.)?modules-load=([^ ]*).*/\3/p' /proc/cmdline
+    # Parameters passed as modules-load= or modules_load= in kernel command line.
+    sed -nr 's/,/\n/g;s/(.* |^)modules[-_]load=([^ ]*).*/\2/p' /proc/cmdline
 
     # Find files /{etc,run,usr/lib}/modules-load.d/*.conf in that order.
     find -L /etc/modules-load.d /run/modules-load.d /usr/lib/modules-load.d \
