@@ -108,6 +108,7 @@ services = [
     'early-machine-id',
     'early-mdadm',
     'early-modules-early',
+    'early-modules',
     'early-modules.target',
     'early-net-lo',
     'early-prepare.target',

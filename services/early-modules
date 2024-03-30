@@ -1,0 +1,5 @@
+# Load kernel modules from modules-load.d
+
+type       = scripted
+command    = ./early/scripts/modules.sh
+depends-ms = early-modules-early

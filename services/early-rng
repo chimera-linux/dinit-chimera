@@ -4,5 +4,5 @@ type         = scripted
 command      = ./early/scripts/rng.sh start
 stop-command = ./early/scripts/rng.sh stop
 depends-on   = early-devices.target
-depends-on   = early-modules.target
+waits-for    = early-modules.target
 waits-for    = early-root-rw.target

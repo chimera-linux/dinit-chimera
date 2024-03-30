@@ -1,5 +1,4 @@
-# Load kernel modules from /etc/modules
+# Kernel modules have been loaded
 
-type       = scripted
-command    = ./early/scripts/modules.sh
-depends-on = early-modules-early
+type       = internal
+depends-ms = early-modules
