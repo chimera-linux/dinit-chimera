@@ -18,7 +18,7 @@ if [ ! -f "$CONFIG" ]; then
 fi
 
 # no array in config
-if ! grep -q "^ARRAY" "$CONFIG"
+if ! grep -q "^ARRAY" "$CONFIG"; then
     exit 0
 fi
 
