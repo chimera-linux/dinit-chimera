@@ -7,8 +7,8 @@ DINIT_NO_CONTAINER=1
 
 command -v mdadm > /dev/null 2>&1 || exit 0
 
-CONFIG=/etc/mdadm/mdadm.conf
-ALTCONFIG=/etc/mdadm.conf
+CONFIG=/etc/mdadm.conf
+ALTCONFIG=/etc/mdadm/mdadm.conf
 
 [ ! -f "$CONFIG" ] && [ -f "$ALTCONFIG" ] && CONFIG="$ALTCONFIG" || :
 
