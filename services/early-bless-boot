@@ -1,0 +1,5 @@
+# Bless the current boot as good
+
+type       = scripted
+command    = ./early/scripts/bless-boot.sh
+depends-on = pre-local.target

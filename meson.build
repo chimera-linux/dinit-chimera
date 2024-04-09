@@ -45,6 +45,7 @@ endforeach
 
 scripts = [
     'binfmt.sh',
+    'bless-boot.sh',
     'cgroups.sh',
     'clock.sh',
     'common.sh',
@@ -88,6 +89,7 @@ endforeach
 services = [
     'boot',
     'early-binfmt',
+    'early-bless-boot',
     'early-cgroups',
     'early-console.target',
     'early-cryptdisks',

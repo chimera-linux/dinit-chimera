@@ -4,3 +4,4 @@ type       = scripted
 command    = ./early/scripts/local.sh
 depends-on = pre-local.target
 depends-on = early-tmpfiles
+waits-for  = early-bless-boot
