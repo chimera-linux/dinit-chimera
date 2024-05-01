@@ -91,12 +91,3 @@ services should not have to depend on `early-prepare.target` and so on.
   * Things such as NTP implementations should wait and use this as `before`.
   * Things requiring date/time to be set should use this as a dependency.
   * This may take a while, so pre-login services depending on this may stall the boot.
-
-These names are legacy and will be removed:
-
-* `init-done.target` - `pre-local.target`
-* `init-local.target` - `local.target`
-* `init-devices.target` - `early-devices.target`
-* `init-fs-local.target` - `early-fs-local.target`
-* `init-fs-pre.target` - `early-fs-pre.target`
-* `init-root-rw.target` - `early-root-rw.target`
