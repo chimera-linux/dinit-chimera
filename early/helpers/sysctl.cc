@@ -115,13 +115,15 @@ rep:
         warn("failed to set sysctl '%s'", name);
         return false;
     }
+    bool ret = true;
     auto vlen = std::strlen(value);
     value[vlen] = '\n';
     if ((write(fd, value, vlen + 1) != ssize_t(vlen + 1)) && !opt) {
         warn("failed to set sysctl '%s'", name);
-        return false;
+        ret = false;
     }
-    return true;
+    close(fd);
+    return ret;
 }
 
 static bool load_conf(char const *s, char *&line, std::size_t &len) {
