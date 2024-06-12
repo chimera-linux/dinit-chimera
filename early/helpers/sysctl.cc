@@ -54,6 +54,7 @@ static char const *paths[] = {
     "/usr/lib/sysctl.d",
     nullptr
 };
+static char const *sys_path = "/etc/sysctl.conf";
 
 static void usage(FILE *f) {
     extern char const *__progname;
@@ -236,6 +237,7 @@ int main(int argc, char **) {
     for (auto &p: got_map) {
         ord_list.push_back(&p.first);
     }
+
     std::sort(ord_list.begin(), ord_list.end(), [](auto a, auto b) {
         return (*a < *b);
     });
@@ -248,6 +250,16 @@ int main(int argc, char **) {
     for (auto &c: ord_list) {
         if (!load_conf(got_map[*c].data(), line, len)) {
             ret = 1;
+        }
+    }
+    /* global sysctl.conf is last if it exists */
+    if (!access(sys_path, R_OK)) {
+        char const *asysp = strchr(sys_path, '/') + 1;
+        /* only load if no file called sysctl.conf was already handled */
+        if (got_map.find(asysp) == got_map.end()) {
+            if (!load_conf(sys_path, line, len)) {
+                ret = 1;
+            }
         }
     }
     std::free(line);
