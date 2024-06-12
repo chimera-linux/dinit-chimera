@@ -120,7 +120,8 @@ rep:
     bool ret = true;
     auto vlen = std::strlen(value);
     value[vlen] = '\n';
-    if ((write(fd, value, vlen + 1) != ssize_t(vlen + 1)) && !opt) {
+    errno = 0;
+    if ((write(fd, value, vlen + 1) <= 0) && !opt) {
         warn("failed to set sysctl '%s'", name);
         ret = false;
     }
