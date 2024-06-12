@@ -36,9 +36,11 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <algorithm>
 
 #include <err.h>
+#include <glob.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <fcntl.h>
@@ -66,7 +68,16 @@ static void usage(FILE *f) {
     );
 }
 
-static bool load_sysctl(char *name, char *value, bool opt) {
+static bool load_sysctl(
+    char *name, char *value, bool opt, bool globbed,
+    std::unordered_set<std::string> &entries
+) {
+    size_t fsep;
+    std::string fullpath;
+    /* we jump here so don't bypass var init */
+    if (globbed) {
+        goto doneg;
+    }
     /* we implement the crappier procps algorithm as opposed to the nicer
      * busybox algorithm (which handles paths such as foo/bar.baz/xyz cleanly
      * without workarounds) for the sake of compatibility and also because it
@@ -75,7 +86,7 @@ static bool load_sysctl(char *name, char *value, bool opt) {
      *
      * first find the first separator; determines if to convert the rest
      */
-    size_t fsep = strcspn(name, "./");
+    fsep = strcspn(name, "./");
     /* no separator or starts with slash; leave everything intact */
     if (!fsep || (name[fsep] == '/')) {
         goto donep;
@@ -94,7 +105,48 @@ static bool load_sysctl(char *name, char *value, bool opt) {
         }
     }
 donep:
-    /* we have a valid pathname, so apply the sysctl */
+    /* we have a valid pathname, so apply the sysctl; but do glob expansion
+     * first in case there is something, do it only if we can match any of
+     * the glob characters to avoid allocations and so on in most cases
+     */
+    if (!globbed && strcspn(name, "*?[")) {
+        fullpath = "/proc/sys/";
+        fullpath += name;
+        glob_t pglob;
+        int gret = glob(fullpath.data(), 0, nullptr, &pglob);
+        switch (gret) {
+            case 0:
+            case GLOB_NOMATCH:
+                return true;
+            default:
+                warn("failed to glob '%s'", name);
+                return false;
+        }
+        char **paths = pglob.gl_pathv;
+        bool ret = true;
+        while (*paths) {
+            char *subp = *paths + sizeof("/proc/sys");
+            if (entries.find(subp) != entries.end()) {
+                /* skip stuff with an explicit pattern */
+                continue;
+            }
+            if (!load_sysctl(subp, value, opt, true, entries)) {
+                ret = false;
+            }
+        }
+        return ret;
+    }
+doneg:
+    /* non-globbed entries that are fully expanded get tracked */
+    if (!globbed) {
+        entries.emplace(name);
+    }
+    /* no value provided; this was prefixed and can be used to skip globs,
+     * unprefixed versions would have already failed earlier due to checks
+     */
+    if (!value) {
+        return true;
+    }
     int fd = openat(sysctl_fd, name, O_WRONLY | O_CREAT | O_TRUNC, 0666);
     if (fd < 0) {
         /* write-only values, we should not fail on those */
@@ -133,7 +185,10 @@ donep:
     return ret;
 }
 
-static bool load_conf(char const *s, char *&line, std::size_t &len) {
+static bool load_conf(
+    char const *s, char *&line, std::size_t &len,
+    std::unordered_set<std::string> &entries
+) {
     FILE *f = std::fopen(s, "rb");
     if (!f) {
         warnx("could not load '%s'", s);
@@ -155,6 +210,10 @@ static bool load_conf(char const *s, char *&line, std::size_t &len) {
             /* disregard the dash once we know, it's not a part of the name */
             ++cline;
         }
+        /* strip more leading spaces if needed */
+        while (std::isspace(*cline)) {
+            ++cline;
+        }
         /* strip trailing whitespace too once we are sure it's not empty */
         auto rl = std::strlen(line);
         while (std::isspace(line[rl - 1])) {
@@ -162,15 +221,17 @@ static bool load_conf(char const *s, char *&line, std::size_t &len) {
         }
         /* find delimiter */
         auto *delim = std::strchr(cline, '=');
-        if (!delim) {
+        if ((!delim && !opt) || (*cline == '/') || (*cline == '.')) {
             warnx("invalid sysctl: '%s'", cline);
             fret = false;
             continue;
         }
-        *delim = '\0';
-        /* split name and value, strip any excess whitespace */
         char *sname = cline;
-        char *svalue = delim + 1;
+        char *svalue = nullptr;
+        if (delim) {
+            *delim = '\0';
+            svalue = delim + 1;
+        }
         auto nl = std::strlen(sname);
         /* trailing spaces of name */
         while ((nl > 0) && std::isspace(sname[nl - 1])) {
@@ -182,11 +243,11 @@ static bool load_conf(char const *s, char *&line, std::size_t &len) {
             continue;
         }
         /* leading spaces of value */
-        while (std::isspace(*svalue)) {
+        while (svalue && std::isspace(*svalue)) {
             ++svalue;
         }
         /* load the sysctl */
-        if (!load_sysctl(sname, svalue, opt)) {
+        if (!load_sysctl(sname, svalue, opt, false, entries)) {
             fret = false;
         }
     }
@@ -266,8 +327,11 @@ int main(int argc, char **) {
     /* now register or print each conf */
     char *line = nullptr;
     std::size_t len = 0;
+    /* for tracking of glob exclusions */
+    std::unordered_set<std::string> entries;
+
     for (auto &c: ord_list) {
-        if (!load_conf(got_map[*c].data(), line, len)) {
+        if (!load_conf(got_map[*c].data(), line, len, entries)) {
             ret = 1;
         }
     }
@@ -276,7 +340,7 @@ int main(int argc, char **) {
         char const *asysp = strchr(sys_path, '/') + 1;
         /* only load if no file called sysctl.conf was already handled */
         if (got_map.find(asysp) == got_map.end()) {
-            if (!load_conf(sys_path, line, len)) {
+            if (!load_conf(sys_path, line, len, entries)) {
                 ret = 1;
             }
         }
