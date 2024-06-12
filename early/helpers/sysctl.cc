@@ -42,6 +42,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 
 /* /proc/sys */
 static int sysctl_fd = -1;
@@ -202,14 +203,26 @@ int main(int argc, char **) {
     std::unordered_map<std::string, std::string> got_map;
 
     for (char const **p = paths; *p; ++p) {
-        DIR *dfd = opendir(*p);
-        if (!dfd) {
+        int dfd = open(*p, O_DIRECTORY | O_PATH);
+        if (dfd < 0) {
             continue;
         }
+        int dupfd = dup(dfd);
+        if (dupfd < 0) {
+            err(1, "dupfd");
+        }
+        DIR *dirp = fdopendir(dupfd);
+        if (!dirp) {
+            err(1, "fdopendir");
+        }
         struct dirent *dp;
-        while ((dp = readdir(dfd))) {
-            /* must be a regular file */
-            if (dp->d_type != DT_REG) {
+        while ((dp = readdir(dirp))) {
+            /* must be a regular file or a symlink to regular file; we cannot
+             * use d_type (nonportable anyway) because that will get DT_LNK
+             * for symlinks (it does not follow)
+             */
+            struct stat st;
+            if ((fstatat(dfd, dp->d_name, &st, 0) < 0) || !S_ISREG(st.st_mode)) {
                 continue;
             }
             /* check if it matches .conf */
@@ -228,7 +241,8 @@ int main(int argc, char **) {
             fp += dp->d_name;
             got_map.emplace(dn, std::move(fp));
         }
-        closedir(dfd);
+        close(dfd);
+        closedir(dirp);
     }
 
     std::vector<std::string const *> ord_list;
