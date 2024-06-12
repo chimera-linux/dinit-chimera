@@ -67,29 +67,33 @@ static void usage(FILE *f) {
 }
 
 static bool load_sysctl(char *name, char *value, bool opt) {
-    /* first, replace dots with slashes to get a path; we cannot just
-     * replace all dots because e.g. foo/bar.baz/xyz can be a valid path,
-     * so instead try names from the end, repeating with dots replaced with
-     * slashes from the beginning until we've found the final correct value
+    /* we implement the crappier procps algorithm as opposed to the nicer
+     * busybox algorithm (which handles paths such as foo/bar.baz/xyz cleanly
+     * without workarounds) for the sake of compatibility and also because it
+     * does not require iterative file access checking which means we can make
+     * up a single path and stick with it, which makes e.g. globbing easier...
+     *
+     * first find the first separator; determines if to convert the rest
      */
-    char *nend = name + std::strlen(name);
-    char *ntry = name - 1;
-    for (*nend = '.'; *nend; *nend = '\0') {
-rep:
-        char *nptr = nend;
-        for (; nptr > ntry; --nptr) {
-            if (*nptr != '.') {
-                continue;
-            }
-            *nptr = '\0';
-            if (!faccessat(sysctl_fd, name, F_OK, AT_SYMLINK_NOFOLLOW)) {
-                *nptr = '/';
-                ntry = nptr;
-                goto rep;
-            }
-            *nptr = '.';
+    size_t fsep = strcspn(name, "./");
+    /* no separator or starts with slash; leave everything intact */
+    if (!fsep || (name[fsep] == '/')) {
+        goto donep;
+    }
+    /* otherwise swap them separators */
+    for (char *curp = name;;) {
+        switch (curp[fsep]) {
+            case '.': name[fsep] = '/'; break;
+            case '/': name[fsep] = '.'; break;
+            default: break;
+        }
+        curp = &curp[fsep + 1];
+        /* end of string or no separator */
+        if (!*curp || !(fsep = strcspn(curp, "./"))) {
+            break;
         }
     }
+donep:
     /* we have a valid pathname, so apply the sysctl */
     int fd = openat(sysctl_fd, name, O_WRONLY | O_CREAT | O_TRUNC, 0666);
     if (fd < 0) {
