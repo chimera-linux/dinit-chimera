@@ -89,19 +89,19 @@ static bool load_sysctl(
      */
     fsep = strcspn(name, "./");
     /* no separator or starts with slash; leave everything intact */
-    if (!fsep || (name[fsep] == '/')) {
+    if (!name[fsep] || (name[fsep] == '/')) {
         goto donep;
     }
     /* otherwise swap them separators */
     for (char *curp = name;;) {
         switch (curp[fsep]) {
-            case '.': name[fsep] = '/'; break;
-            case '/': name[fsep] = '.'; break;
+            case '.': curp[fsep] = '/'; break;
+            case '/': curp[fsep] = '.'; break;
             default: break;
         }
         curp = &curp[fsep + 1];
         /* end of string or no separator */
-        if (!*curp || !(fsep = strcspn(curp, "./"))) {
+        if (!*curp || !curp[fsep = strcspn(curp, "./")]) {
             break;
         }
     }
@@ -110,7 +110,7 @@ donep:
      * first in case there is something, do it only if we can match any of
      * the glob characters to avoid allocations and so on in most cases
      */
-    if (!globbed && strcspn(name, "*?[")) {
+    if (!globbed && name[strcspn(name, "*?[")]) {
         if (dry_run) {
             fprintf(stderr, "potential glob: %s\n", name);
         }
@@ -192,13 +192,16 @@ doneg:
         warn("failed to set sysctl '%s'", name);
         return false;
     }
+    if (dry_run) {
+        fprintf(stderr, "setting sysctl: %s=%s (opt: %d)\n", name, value, opt);
+        close(fd);
+        return true;
+    }
     bool ret = true;
     auto vlen = std::strlen(value);
     value[vlen] = '\n';
     errno = 0;
-    if (dry_run) {
-        fprintf(stderr, "setting sysctl: %s=%s (opt: %d)\n", name, value, opt);
-    } else if ((write(fd, value, vlen + 1) <= 0) && !opt) {
+    if ((write(fd, value, vlen + 1) <= 0) && !opt) {
         warn("failed to set sysctl '%s'", name);
         ret = false;
     }
