@@ -120,6 +120,10 @@ donep:
         int gret = glob(fullpath.data(), 0, nullptr, &pglob);
         switch (gret) {
             case 0:
+                if (dry_run) {
+                    fprintf(stderr, "... matches: %zu\n", pglob.gl_pathc);
+                }
+                break;
             case GLOB_NOMATCH:
                 if (dry_run) {
                     fprintf(stderr, "... no matches\n");
@@ -129,15 +133,23 @@ donep:
                 warn("failed to glob '%s'", name);
                 return false;
         }
-        char **paths = pglob.gl_pathv;
         bool ret = true;
-        while (*paths) {
+        struct stat st;
+        for (char **paths = pglob.gl_pathv; *paths; ++paths) {
             char *subp = *paths + sizeof("/proc/sys");
             if (dry_run) {
                 fprintf(stderr, "... glob match: %s\n", subp);
             }
             if (entries.find(subp) != entries.end()) {
                 /* skip stuff with an explicit pattern */
+                continue;
+            }
+            if (stat(*paths, &st)) {
+                warn("failed to stat '%s'", *paths);
+                ret = false;
+            }
+            if (!S_ISREG(st.st_mode)) {
+                /* skip dirs if we match them */
                 continue;
             }
             if (!load_sysctl(subp, value, opt, true, entries)) {
