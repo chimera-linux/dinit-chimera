@@ -296,7 +296,7 @@ int main(int argc, char **) {
     std::unordered_map<std::string, std::string> got_map;
 
     for (char const **p = paths; *p; ++p) {
-        int dfd = open(*p, O_DIRECTORY | O_PATH);
+        int dfd = open(*p, O_RDONLY | O_DIRECTORY);
         if (dfd < 0) {
             continue;
         }
