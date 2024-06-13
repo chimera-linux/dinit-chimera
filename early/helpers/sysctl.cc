@@ -48,6 +48,7 @@
 
 /* /proc/sys */
 static int sysctl_fd = -1;
+static bool dry_run = false;
 
 /* search paths for conf files */
 static char const *paths[] = {
@@ -110,6 +111,9 @@ donep:
      * the glob characters to avoid allocations and so on in most cases
      */
     if (!globbed && strcspn(name, "*?[")) {
+        if (dry_run) {
+            fprintf(stderr, "potential glob: %s\n", name);
+        }
         fullpath = "/proc/sys/";
         fullpath += name;
         glob_t pglob;
@@ -117,6 +121,9 @@ donep:
         switch (gret) {
             case 0:
             case GLOB_NOMATCH:
+                if (dry_run) {
+                    fprintf(stderr, "... no matches\n");
+                }
                 return true;
             default:
                 warn("failed to glob '%s'", name);
@@ -126,6 +133,9 @@ donep:
         bool ret = true;
         while (*paths) {
             char *subp = *paths + sizeof("/proc/sys");
+            if (dry_run) {
+                fprintf(stderr, "... glob match: %s\n", subp);
+            }
             if (entries.find(subp) != entries.end()) {
                 /* skip stuff with an explicit pattern */
                 continue;
@@ -139,16 +149,25 @@ donep:
 doneg:
     /* non-globbed entries that are fully expanded get tracked */
     if (!globbed) {
+        if (dry_run) {
+            fprintf(stderr,  "track sysctl: %s\n", name);
+        }
         entries.emplace(name);
     }
     /* no value provided; this was prefixed and can be used to skip globs,
      * unprefixed versions would have already failed earlier due to checks
      */
     if (!value) {
+        if (dry_run) {
+            fprintf(stderr, "no value sysctl: %s\n", name);
+        }
         return true;
     }
     int fd = openat(sysctl_fd, name, O_WRONLY | O_CREAT | O_TRUNC, 0666);
     if (fd < 0) {
+        if (dry_run) {
+            fprintf(stderr, "lookup fail for %s (%s)\n", name, strerror(errno));
+        }
         /* write-only values, we should not fail on those */
         if (errno == EACCES) {
             return true;
@@ -177,7 +196,9 @@ doneg:
     auto vlen = std::strlen(value);
     value[vlen] = '\n';
     errno = 0;
-    if ((write(fd, value, vlen + 1) <= 0) && !opt) {
+    if (dry_run) {
+        fprintf(stderr, "setting sysctl: %s=%s (opt: %d)\n", name, value, opt);
+    } else if ((write(fd, value, vlen + 1) <= 0) && !opt) {
         warn("failed to set sysctl '%s'", name);
         ret = false;
     }
@@ -218,6 +239,9 @@ static bool load_conf(
         auto rl = std::strlen(line);
         while (std::isspace(line[rl - 1])) {
             line[--rl] = '\0';
+        }
+        if (dry_run) {
+            fprintf(stderr, "=> LINE MATCH: '%s'\n", cline);
         }
         /* find delimiter */
         auto *delim = std::strchr(cline, '=');
@@ -265,6 +289,9 @@ int main(int argc, char **) {
     if (sysctl_fd < 0) {
         err(1, "failed to open sysctl path");
     }
+
+    /* prints stuff but does not actually set anything */
+    dry_run = !!getenv("DINIT_CHIMERA_SYSCTL_DRY_RUN");
 
     std::unordered_map<std::string, std::string> got_map;
 
