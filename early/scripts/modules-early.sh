@@ -9,5 +9,6 @@ MODFILE=/lib/modules/$(uname -r)/modules.devname
 [ -r "$MODFILE" ] || exit 0
 
 for f in $(awk '/^[^#]/ {print $1}' "$MODFILE"); do
-    modprobe -bq "$f" 2> /dev/null
+    modprobe -bq "$f" 2> /dev/null || \
+        echo "WARNING: modprobe failed for '$f'"
 done
