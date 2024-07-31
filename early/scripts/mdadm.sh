@@ -22,4 +22,4 @@ if ! grep -q "^ARRAY" "$CONFIG"; then
     exit 0
 fi
 
-exec mdadm -As
+mdadm -As || :
