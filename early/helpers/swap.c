@@ -55,6 +55,16 @@ static int usage(char **argv) {
     return 1;
 }
 
+static int do_swapoff(char const *path) {
+    /* no need to swapoff zram devices as it only takes time and there is never
+     * any backing storage where destroying that would depend on swap being off
+     */
+    if (!strncmp(path, "/dev/zram", sizeof("/dev/zram") - 1)) {
+        return 0;
+    }
+    return swapoff(path);
+}
+
 /* we must be able to resolve e.g. LABEL=swapname */
 static char const *resolve_dev(char const *raw, char *buf, size_t bufsz) {
 #define CHECK_PFX(name, lname) \
@@ -162,7 +172,7 @@ static int do_stop(void) {
             if (p) {
                 *p = '\0';
             }
-            if (swapoff(line)) {
+            if (do_swapoff(line)) {
                 warn("swapoff failed for swap '%s'", line);
                 ret = 1;
             }
@@ -179,7 +189,7 @@ static int do_stop(void) {
                 continue;
             }
             devname = resolve_dev(m->mnt_fsname, devbuf, sizeof(devbuf));
-            if (swapoff(devname) && (errno != EINVAL)) {
+            if (do_swapoff(devname) && (errno != EINVAL)) {
                 warn("swapoff failed for '%s'", m->mnt_fsname);
                 ret = 1;
             }
