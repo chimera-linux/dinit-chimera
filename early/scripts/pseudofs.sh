@@ -18,7 +18,10 @@ mntpt /dev  || mount -o mode=0755,nosuid    -t devtmpfs dev  /dev
 
 mkdir -p -m0755 /dev/pts /dev/shm
 
-mntpt /dev/pts || mount -o mode=0620,gid=5,nosuid,noexec -n -t devpts devpts /dev/pts
+# provide a fallback in case of failure
+TTY_ENT=$(getent group tty 2>/dev/null) || TTY_ENT="tty:x:5"
+
+mntpt /dev/pts || mount -o mode=0620,gid=$(echo $TTY_ENT | cut -d: -f3),nosuid,noexec -n -t devpts devpts /dev/pts
 mntpt /dev/shm || mount -o mode=1777,nosuid,nodev -n -t tmpfs shm /dev/shm
 
 [ -h /dev/fd ] || ln -s /proc/self/fd /dev/fd
