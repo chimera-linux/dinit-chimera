@@ -12,10 +12,16 @@ cd /usr/lib/dinit.d
 if [ ! -e /run/dinit/container ]; then
     echo "Disabling swap..."
     ./early/scripts/swap.sh stop
+    echo "Unmounting network filesystems..."
+    umount -l -a -t nfs,nfs4,smbfs,cifs
+    umount -l -a -O netdev
     echo "Unmounting filesystems..."
     ./early/scripts/fs-fstab.sh stop
     echo "Remounting root read-only..."
-    mount -n -o remount,ro /
+    # util-linux 2.40 breaks e.g. overlayfs
+    # remount due to newer kernel interface
+    # https://github.com/util-linux/util-linux/issues/2576
+    LIBMOUNT_FORCE_MOUNT2=always mount -n -o remount,ro /
 fi
 
 sync
