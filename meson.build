@@ -1,9 +1,9 @@
 project(
     'dinit-chimera',
-    ['c', 'cpp'],
+    ['cpp'],
     version: '0.99.7',
     default_options: [
-        'c_std=c99', 'cpp_std=c++17',
+        'cpp_std=c++17',
         'cpp_eh=none', 'cpp_rtti=false',
         'warning_level=3',
         'buildtype=debugoptimized',
@@ -22,7 +22,7 @@ helpers = [
     ['swclock', ['early/helpers/swclock.cc']],
     ['lo',      ['early/helpers/lo.cc']],
     ['mntpt',   ['early/helpers/mntpt.cc']],
-    ['seedrng', ['early/helpers/seedrng.c']],
+    ['seedrng', ['early/helpers/seedrng.cc']],
     ['sysctl',  ['early/helpers/sysctl.cc']],
     ['swap',    ['early/helpers/swap.cc']],
 ]

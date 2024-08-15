@@ -4,6 +4,12 @@
 #define _GNU_SOURCE
 #endif
 
+#include <cstdint>
+#include <cstring>
+#include <cstdio>
+#include <cstdlib>
+#include <cerrno>
+#include <ctime>
 #include <linux/random.h>
 #include <sys/syscall.h>
 #include <sys/random.h>
@@ -14,14 +20,7 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <unistd.h>
-#include <time.h>
-#include <errno.h>
 #include <endian.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 #ifndef LOCALSTATEDIR
 #define LOCALSTATEDIR "/var/lib"
@@ -198,7 +197,7 @@ static void blake2s_compress(struct blake2s_state *state, const uint8_t *block, 
 static void blake2s_update(struct blake2s_state *state, const void *inp, size_t inlen)
 {
 	const size_t fill = BLAKE2S_BLOCK_LEN - state->buflen;
-	const uint8_t *in = inp;
+	auto *in = static_cast<const uint8_t *>(inp);
 
 	if (!inlen)
 		return;
@@ -231,7 +230,7 @@ static void blake2s_final(struct blake2s_state *state, uint8_t *out)
 static ssize_t getrandom_full(void *buf, size_t count, unsigned int flags)
 {
 	ssize_t ret, total = 0;
-	uint8_t *p = buf;
+	uint8_t *p = static_cast<uint8_t *>(buf);
 
 	do {
 		ret = getrandom(p, count, flags);
@@ -249,7 +248,7 @@ static ssize_t getrandom_full(void *buf, size_t count, unsigned int flags)
 static ssize_t read_full(int fd, void *buf, size_t count)
 {
 	ssize_t ret, total = 0;
-	uint8_t *p = buf;
+	uint8_t *p = static_cast<uint8_t *>(buf);
 
 	do {
 		ret = read(fd, p, count);
@@ -269,7 +268,7 @@ static ssize_t read_full(int fd, void *buf, size_t count)
 static ssize_t write_full(int fd, const void *buf, size_t count)
 {
 	ssize_t ret, total = 0;
-	const uint8_t *p = buf;
+	auto *p = static_cast<const uint8_t *>(buf);
 
 	do {
 		ret = write(fd, p, count);
@@ -315,10 +314,9 @@ static int read_new_seed(uint8_t *seed, size_t len, bool *is_creditable)
 		*is_creditable = true;
 		return 0;
 	} else if (ret < 0 && errno == ENOSYS) {
-		struct pollfd random_fd = {
-			.fd = open("/dev/random", O_RDONLY),
-			.events = POLLIN
-		};
+		struct pollfd random_fd = {};
+		random_fd.fd = open("/dev/random", O_RDONLY);
+		random_fd.events = POLLIN;
 		if (random_fd.fd < 0)
 			return -errno;
 		*is_creditable = poll(&random_fd, 1, 0) == 1;
@@ -344,10 +342,9 @@ static int seed_rng(uint8_t *seed, size_t len, bool credit)
 		int entropy_count;
 		int buf_size;
 		uint8_t buffer[MAX_SEED_LEN];
-	} req = {
-		.entropy_count = credit ? len * 8 : 0,
-		.buf_size = len
-	};
+	} req = {};
+	req.entropy_count = credit ? len * 8 : 0;
+	req.buf_size = len;
 	int random_fd, ret;
 
 	if (len > sizeof(req.buffer)) {
@@ -429,7 +426,7 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
 	uint8_t new_seed[MAX_SEED_LEN];
 	size_t new_seed_len;
 	bool new_seed_creditable;
-	struct timespec realtime = { 0 }, boottime = { 0 };
+	struct timespec realtime = {}, boottime = {};
 	struct blake2s_state hash;
 
 	umask(0077);
