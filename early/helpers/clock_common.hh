@@ -1,8 +1,8 @@
 #ifndef CLOCK_COMMON_H
 #define CLOCK_COMMON_H
 
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 
 typedef enum {
     RTC_MOD_UTC,

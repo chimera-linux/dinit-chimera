@@ -43,22 +43,22 @@
 #define _GNU_SOURCE
 #endif
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <time.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cstddef>
+#include <cstdint>
+#include <cerrno>
+#include <ctime>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/file.h>
 #include <unistd.h>
-#include <errno.h>
 #include <fcntl.h>
 #include <utime.h>
 #include <err.h>
 
-#include "clock_common.h"
+#include "clock_common.hh"
 
 #ifndef LOCALSTATEDIR
 #define LOCALSTATEDIR "/var/lib"
@@ -85,12 +85,12 @@ static int stat_reg(int dfd, char const *fpath, struct stat *st) {
 }
 
 static int do_start(int dfd, time_t curt, rtc_mod_t mod) {
-    struct timeval tv = {0};
+    struct timeval tv = {};
     struct stat st;
     FILE *rtcf, *offf;
     char rtc_epochs[32];
     char offsets[32];
-    char *errp = NULL;
+    char *errp = nullptr;
     unsigned long long rtc_epoch, offset;
     int offfd;
 
@@ -158,7 +158,7 @@ static int do_start(int dfd, time_t curt, rtc_mod_t mod) {
         rtc_epoch = (unsigned long long)rtc_lt;
     }
 
-    errp = NULL;
+    errp = nullptr;
     offset = strtoull(offsets, &errp, 10);
     if (!offset || !errp || (*errp && (*errp != '\n'))) {
         /* junk value */
@@ -194,7 +194,7 @@ regular_set:
 
 do_set:
     /* set it */
-    if (settimeofday(&tv, NULL) < 0) {
+    if (settimeofday(&tv, nullptr) < 0) {
         err(1, "settimeofday");
     }
 
@@ -202,9 +202,9 @@ do_set:
 }
 
 static int do_stop(int dfd, time_t curt) {
-    struct timespec times[2] = {0};
+    struct timespec times[2] = {};
     char epochs[32];
-    char *errp = NULL;
+    char *errp = nullptr;
     unsigned long long epoch;
     FILE *rtcf;
     int ofd, fd;
@@ -294,7 +294,7 @@ int main(int argc, char **argv) {
         mod = rtc_mod_guess();
     }
 
-    if (gettimeofday(&ctv, NULL) < 0) {
+    if (gettimeofday(&ctv, nullptr) < 0) {
         err(1, "gettimeofday");
     }
 

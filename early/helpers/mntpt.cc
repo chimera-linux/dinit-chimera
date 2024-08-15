@@ -1,7 +1,5 @@
 /*
- * Loopback device bringup helper
- *
- * Does the same thing as `ip link set up dev lo`.
+ * A helper that checks if a path is a mountpoint
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
@@ -33,47 +31,75 @@
 #define _GNU_SOURCE
 #endif
 
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <err.h>
-#include <net/if.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <mntent.h>
+#include <sys/stat.h>
 
-int main(void) {
-    int fams[] = {PF_INET, PF_PACKET, PF_INET6, PF_UNSPEC};
-    int fd = -1, serr = 0;
+/* fallback; not accurate but good enough for early boot */
+static int mntpt_noproc(char const *inpath, struct stat *st) {
+    dev_t sdev;
+    ino_t sino;
+    char *path;
+    size_t slen;
 
-    for (int *fam = fams; *fam != PF_UNSPEC; ++fam) {
-        fd = socket(*fam, SOCK_DGRAM, 0);
-        if (fd >= 0) {
+    sdev = st->st_dev;
+    sino = st->st_ino;
+
+    /* can't detect file bindmounts without proc */
+    if (!S_ISDIR(st->st_mode)) {
+        return 1;
+    }
+
+    slen = strlen(inpath);
+    path = static_cast<char *>(malloc(slen + 4));
+    if (!path) {
+        return 1;
+    }
+
+    snprintf(path, slen + 4, "%s/..", inpath);
+    if (stat(path, st)) {
+        return 1;
+    }
+
+    /* different device -> mount point
+     * same inode -> most likely root
+     */
+    free(path);
+    return (st->st_dev == sdev) && (st->st_ino != sino);
+}
+
+int main(int argc, char **argv) {
+    struct stat st;
+    FILE *sf;
+    struct mntent *mn;
+    char *path;
+    int retval = 1;
+
+    /* symbolic link or not given */
+    if ((argc != 2) || lstat(argv[1], &st) || S_ISLNK(st.st_mode)) {
+        return 1;
+    }
+
+    sf = setmntent("/proc/self/mounts", "r");
+    if (!sf) {
+        return mntpt_noproc(argv[1], &st);
+    }
+
+    path = realpath(argv[1], nullptr);
+    if (!path) {
+        return 1;
+    }
+
+    while ((mn = getmntent(sf))) {
+        if (!strcmp(mn->mnt_dir, path)) {
+            retval = 0;
             break;
-        } else if (!serr) {
-            serr = errno; /* save first error */
         }
     }
 
-    if (fd < 0) {
-        errno = serr;
-        err(1, "socket");
-    }
-
-    struct ifreq ifr;
-    memcpy(ifr.ifr_name, "lo", 3);
-
-    if (ioctl(fd, SIOCGIFFLAGS, &ifr) < 0) {
-        err(1, "SIOCGIFFLAGS");
-    }
-
-    if (ifr.ifr_flags & IFF_UP) {
-        return 0;
-    }
-
-    ifr.ifr_flags |= IFF_UP;
-    if (ioctl(fd, SIOCSIFFLAGS, &ifr) < 0) {
-        err(1, "SIOCSIFFLAGS");
-    }
-
-    return 0;
+    endmntent(sf);
+    free(path);
+    return retval;
 }

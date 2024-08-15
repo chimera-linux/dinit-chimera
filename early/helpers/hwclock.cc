@@ -40,13 +40,13 @@
 #define _GNU_SOURCE
 #endif
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cerrno>
+#include <ctime>
 #include <unistd.h>
-#include <errno.h>
 #include <fcntl.h>
-#include <time.h>
 #include <err.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
@@ -56,7 +56,7 @@
 /* RTC_SET_TIME */
 #include <linux/rtc.h>
 
-#include "clock_common.h"
+#include "clock_common.hh"
 
 typedef enum {
     OPT_START,
@@ -70,9 +70,9 @@ static int usage(char **argv) {
 
 static int do_settimeofday(struct timezone const *tz) {
 #if !defined(SYS_settimeofday) && defined(SYS_settimeofday_time32)
-    int ret = syscall(SYS_settimeofday_time32, NULL, tz);
+    int ret = syscall(SYS_settimeofday_time32, 0, tz);
 #else
-    int ret = syscall(SYS_settimeofday, NULL, tz);
+    int ret = syscall(SYS_settimeofday, 0, tz);
 #endif
     if (ret) {
         warn("settimeofday");
@@ -81,8 +81,10 @@ static int do_settimeofday(struct timezone const *tz) {
 }
 
 static int do_start(rtc_mod_t mod) {
-    struct timezone tz = {0};
+    struct timezone tz = {};
     int ret = 0;
+    struct tm *lt;
+    time_t ct;
 
     /* for UTC, lock warp_clock and PCIL */
     if (mod == RTC_MOD_UTC) {
@@ -92,8 +94,8 @@ static int do_start(rtc_mod_t mod) {
         }
     }
 
-    time_t ct = time(NULL);
-    struct tm *lt = localtime(&ct);
+    ct = time(nullptr);
+    lt = localtime(&ct);
     tz.tz_minuteswest = (-lt->tm_gmtoff / 60);
 
     /* set kernel timezone; lock warp_clock and set PCIL if non-UTC */
@@ -107,11 +109,11 @@ done:
 
 static int do_stop(rtc_mod_t mod) {
     struct timeval tv;
-    struct tm tmt = {0};
+    struct tm tmt = {};
     /* open rtc; it may be busy, so loop */
     int fd = -1;
 
-    char const *rtcs[] = {"/dev/rtc", "/dev/rtc0", NULL};
+    char const *rtcs[] = {"/dev/rtc", "/dev/rtc0", nullptr};
     char const **crtc = rtcs;
 
     while (*crtc++) {
@@ -139,7 +141,7 @@ static int do_stop(rtc_mod_t mod) {
     }
 
     /* should not fail though */
-    if (gettimeofday(&tv, NULL) < 0) {
+    if (gettimeofday(&tv, nullptr) < 0) {
         close(fd);
         return 1;
     }

@@ -33,10 +33,10 @@
 #define _GNU_SOURCE
 #endif
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cerrno>
 #include <err.h>
 #include <unistd.h>
 #include <mntent.h>
@@ -123,7 +123,7 @@ static int do_start(void) {
         if (opt) {
             opt += 3;
             if (*opt++ == '=') {
-                char *err = NULL;
+                char *err = nullptr;
                 unsigned long pval = strtoul(opt, &err, 10);
                 if (pval > SWAP_FLAG_PRIO_MASK) {
                     pval = SWAP_FLAG_PRIO_MASK;
@@ -161,7 +161,7 @@ static int do_stop(void) {
     /* first do /proc/swaps */
     FILE *f = fopen("/proc/swaps", "r");
     if (f) {
-        char *line = NULL;
+        char *line = nullptr;
         size_t len = 0;
         ssize_t nread;
         while ((nread = getline(&line, &len, f)) != -1) {

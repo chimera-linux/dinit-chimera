@@ -18,13 +18,13 @@ earlydir = srvdir / 'early'
 
 helpers = [
     ['binfmt',  ['early/helpers/binfmt.cc']],
-    ['hwclock', ['early/helpers/hwclock.c']],
-    ['swclock', ['early/helpers/swclock.c']],
-    ['lo',      ['early/helpers/lo.c']],
-    ['mntpt',   ['early/helpers/mntpt.c']],
+    ['hwclock', ['early/helpers/hwclock.cc']],
+    ['swclock', ['early/helpers/swclock.cc']],
+    ['lo',      ['early/helpers/lo.cc']],
+    ['mntpt',   ['early/helpers/mntpt.cc']],
     ['seedrng', ['early/helpers/seedrng.c']],
     ['sysctl',  ['early/helpers/sysctl.cc']],
-    ['swap',    ['early/helpers/swap.c']],
+    ['swap',    ['early/helpers/swap.cc']],
 ]
 
 foreach helper: helpers
