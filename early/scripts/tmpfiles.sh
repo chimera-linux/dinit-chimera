@@ -4,7 +4,7 @@ DINIT_SERVICE=tmpfiles
 
 . ./early/scripts/common.sh
 
-systemd-tmpfiles "$@"
+sd-tmpfiles "$@"
 
 RET=$?
 case "$RET" in

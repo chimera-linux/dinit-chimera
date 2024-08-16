@@ -10,7 +10,7 @@ if [ "$1" = "stop" ]; then
 fi
 
 # require the module if it's around, but don't fail - it may be builtin
-modprobe -bq binfmt_misc 2> /dev/null
+./early/helpers/kmod load binfmt_misc
 
 # try to make sure it's mounted too, otherwise binfmt-helper will fail
 ./early/helpers/mntpt /proc/sys/fs/binfmt_misc || mount -o nosuid,noexec,nodev \

@@ -16,20 +16,24 @@ tmpfdir = get_option('libdir') / 'tmpfiles.d'
 srvdir = get_option('libdir') / 'dinit.d'
 earlydir = srvdir / 'early'
 
+kmod_dep = dependency('libkmod')
+
 helpers = [
-    ['binfmt',  ['early/helpers/binfmt.cc']],
-    ['hwclock', ['early/helpers/hwclock.cc']],
-    ['swclock', ['early/helpers/swclock.cc']],
-    ['lo',      ['early/helpers/lo.cc']],
-    ['mntpt',   ['early/helpers/mntpt.cc']],
-    ['seedrng', ['early/helpers/seedrng.cc']],
-    ['sysctl',  ['early/helpers/sysctl.cc']],
-    ['swap',    ['early/helpers/swap.cc']],
+    ['binfmt',  ['early/helpers/binfmt.cc'], []],
+    ['hwclock', ['early/helpers/hwclock.cc'], []],
+    ['swclock', ['early/helpers/swclock.cc'], []],
+    ['kmod',    ['early/helpers/kmod.cc'], [kmod_dep]],
+    ['lo',      ['early/helpers/lo.cc'], []],
+    ['mntpt',   ['early/helpers/mntpt.cc'], []],
+    ['seedrng', ['early/helpers/seedrng.cc'], []],
+    ['sysctl',  ['early/helpers/sysctl.cc'], []],
+    ['swap',    ['early/helpers/swap.cc'], []],
 ]
 
 foreach helper: helpers
     executable(
         helper[0], helper[1],
+        dependencies: helper[2],
         install: true,
         install_dir: earlydir / 'helpers'
     )

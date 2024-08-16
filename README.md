@@ -16,15 +16,14 @@ Currently the documentation for the suite is lacking, which is also to be done.
 * Basic core utilities
   * [chimerautils](https://github.com/chimera-linux/chimerautils) is most tested
   * GNU coreutils, busybox etc. may work (patches welcome)
+* [sd-tools](https://github.com/chimera-linux/sd-tools) (particularly `sd-tmpfiles`)
+* [libkmod](https://github.com/kmod-project/kmod)
 * POSIX shell
 * `awk` (POSIX will do)
-* `modprobe`
-  * Must have blacklist support
 * `mount`, `umount`
   * Implementation must support `-a`
 * `sulogin` (any implementation)
 * `systemd-udev` (`eudev` will work with some path changes)
-* `systemd-tmpfiles` (for now, a builtin implementation is planned)
 
 ### Optional dependencies
 
