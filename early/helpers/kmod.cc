@@ -163,6 +163,9 @@ static int do_static_modules(struct kmod_ctx *ctx) {
     char buf[256], *bufp;
     int modb = open("/lib/modules", O_DIRECTORY | O_PATH);
     if (modb < 0) {
+        if (errno == ENOENT) {
+            return 0;
+        }
         warn("opening /lib/modules failed");
         return 2;
     }
@@ -174,6 +177,9 @@ static int do_static_modules(struct kmod_ctx *ctx) {
     }
     int kernb = openat(modb, ub.release, O_DIRECTORY | O_PATH);
     if (kernb < 0) {
+        if (errno == ENOENT) {
+            return 0;
+        }
         warn("opening kernel directory failed");
         close(modb);
         return 2;
@@ -181,6 +187,9 @@ static int do_static_modules(struct kmod_ctx *ctx) {
     close(modb);
     int devf = openat(kernb, "modules.devname", O_RDONLY);
     if (devf < 0) {
+        if (errno == ENOENT) {
+            return 0;
+        }
         warn("opening modules.devname failed");
         close(kernb);
         return 2;
@@ -191,7 +200,6 @@ static int do_static_modules(struct kmod_ctx *ctx) {
         close(devf);
         return 2;
     }
-    int ret = 0;
     while ((bufp = std::fgets(buf, sizeof(buf), df))) {
         auto sl = std::strlen(bufp);
         /* extract the module name */
@@ -201,10 +209,11 @@ static int do_static_modules(struct kmod_ctx *ctx) {
         }
         /* skip comments */
         if (bufp[0] != '#') {
-            int r = mod_load(ctx, bufp);
-            if (r < 0) {
+            if (mod_load(ctx, bufp) < 0) {
+                /* we don't want early-modules to fail if possible,
+                 * but an error message is nice so display it anyway
+                 */
                 warn("failed to load module '%s'", bufp);
-                ret = r;
             }
         }
         /* exhaust the rest of the line just in case */
@@ -220,7 +229,7 @@ static int do_static_modules(struct kmod_ctx *ctx) {
             break;
         }
     }
-    return ret;
+    return 0;
 }
 
 static int do_load(struct kmod_ctx *ctx, char const *modname) {
