@@ -2,5 +2,6 @@
 
 type       = scripted
 command    = ./early/scripts/tmpfiles.sh --create --remove --boot --exclude-prefix=/dev
+log-type    = buffer
 depends-on = early-fs-local.target
 depends-on = pre-local.target

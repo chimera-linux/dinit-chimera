@@ -2,6 +2,7 @@
 
 type       = scripted
 command    = ./early/scripts/local.sh
+log-type    = buffer
 depends-on = pre-local.target
 depends-on = early-tmpfiles
 waits-for  = early-bless-boot

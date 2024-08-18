@@ -2,4 +2,5 @@
 
 type       = scripted
 command    = ./early/scripts/swap.sh start
+log-type    = buffer
 depends-on = early-fs-local.target

@@ -2,6 +2,7 @@
 
 type       = scripted
 command    = ./early/scripts/tmpfiles.sh --prefix=/dev --create --boot
+log-type    = buffer
 depends-on = early-modules-early
 depends-on = early-tmpfs
 depends-on = early-root-remount

@@ -3,4 +3,5 @@
 type         = scripted
 command      = ./early/scripts/binfmt.sh start
 stop-command = ./early/scripts/binfmt.sh stop
+log-type      = buffer
 depends-on   = early-fs-local.target

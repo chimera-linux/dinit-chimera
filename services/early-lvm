@@ -2,6 +2,7 @@
 
 type       = scripted
 command    = ./early/scripts/lvm.sh start
+log-type    = buffer
 depends-on = early-devices.target
 depends-on = early-cryptdisks-early
 depends-ms = early-root-fsck

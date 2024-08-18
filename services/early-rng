@@ -3,6 +3,7 @@
 type         = scripted
 command      = ./early/scripts/rng.sh start
 stop-command = ./early/scripts/rng.sh stop
+log-type      = buffer
 depends-on   = early-devices.target
 waits-for    = early-modules.target
 waits-for    = early-root-rw.target

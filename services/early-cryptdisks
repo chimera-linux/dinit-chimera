@@ -2,6 +2,7 @@
 
 type       = scripted
 command    = ./early/scripts/cryptdisks.sh remaining start
+log-type    = buffer
 depends-on = early-devices.target
 depends-on = early-cryptdisks-early
 depends-on = early-dmraid

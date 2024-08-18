@@ -2,5 +2,6 @@
 
 type       = scripted
 command    = ./early/scripts/root-rw.sh
+log-type    = buffer
 depends-ms = early-root-fsck
 options    = starts-rwfs

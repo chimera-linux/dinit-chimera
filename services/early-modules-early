@@ -3,4 +3,5 @@
 
 type       = scripted
 command    = ./early/scripts/modules-early.sh
+log-type    = buffer
 depends-on = early-prepare.target

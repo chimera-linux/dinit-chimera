@@ -2,6 +2,7 @@
 
 type       = scripted
 command    = ./early/scripts/fs-fstab.sh start
+log-type    = buffer
 depends-on = early-fs-pre.target
 waits-for  = early-fs-zfs
 waits-for  = early-fs-btrfs

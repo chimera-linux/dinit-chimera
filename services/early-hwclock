@@ -3,6 +3,7 @@
 type         = scripted
 command      = ./early/scripts/clock.sh hwclock start
 stop-command = ./early/scripts/clock.sh hwclock stop
+log-type      = buffer
 depends-on   = early-udevd
 depends-on   = early-prepare.target
 depends-on   = early-root-rw.target

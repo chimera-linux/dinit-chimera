@@ -2,4 +2,5 @@
 
 type     = scripted
 command  = ./early/scripts/env.sh
+log-type    = buffer
 options  = pass-cs-fd

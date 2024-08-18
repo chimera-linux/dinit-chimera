@@ -2,4 +2,5 @@
 
 type       = scripted
 command    = ./early/scripts/bless-boot.sh
+log-type    = buffer
 depends-on = pre-local.target

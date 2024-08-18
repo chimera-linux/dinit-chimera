@@ -3,6 +3,7 @@
 
 type       = scripted
 command    = ./early/scripts/console.sh
+log-type    = buffer
 depends-on = early-devices.target
 depends-on = early-fs-local.target
 depends-on = early-keyboard.target

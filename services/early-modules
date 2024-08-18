@@ -2,4 +2,5 @@
 
 type       = scripted
 command    = ./early/scripts/modules.sh
+log-type    = buffer
 depends-ms = early-modules-early

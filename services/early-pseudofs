@@ -2,5 +2,6 @@
 
 type       = scripted
 command    = ./early/scripts/pseudofs.sh
+log-type    = buffer
 depends-on = early-env
 depends-on = early-root-remount

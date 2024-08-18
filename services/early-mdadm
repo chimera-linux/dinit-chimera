@@ -2,5 +2,6 @@
 
 type       = scripted
 command    = ./early/scripts/mdadm.sh
+log-type    = buffer
 depends-on = early-devices.target
 depends-ms = early-root-fsck

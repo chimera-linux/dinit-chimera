@@ -2,5 +2,6 @@
 
 type       = scripted
 command    = ./early/scripts/udev.sh settle
+log-type    = buffer
 depends-on = early-udevd
 depends-on = early-udev-trigger

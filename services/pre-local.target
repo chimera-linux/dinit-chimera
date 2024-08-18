@@ -2,6 +2,7 @@
 
 type       = scripted
 command    = ./early/scripts/done.sh
+log-type    = buffer
 depends-on = early-fs-local.target
 depends-on = early-console.target
 depends-on = early-net-lo

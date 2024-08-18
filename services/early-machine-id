@@ -2,6 +2,7 @@
 
 type       = scripted
 command    = ./early/scripts/machine-id.sh
+log-type    = buffer
 depends-on = early-rng
 depends-on = early-swclock
 waits-for  = early-root-rw.target

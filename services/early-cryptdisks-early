@@ -2,6 +2,7 @@
 
 type       = scripted
 command    = ./early/scripts/cryptdisks.sh early start
+log-type    = buffer
 depends-on = early-devices.target
 depends-on = early-keyboard.target
 depends-ms = early-root-fsck

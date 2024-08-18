@@ -2,4 +2,5 @@
 
 type       = scripted
 command    = ./early/scripts/fs-btrfs.sh
+log-type    = buffer
 depends-on = early-fs-pre.target

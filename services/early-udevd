@@ -4,6 +4,7 @@
 type         = scripted
 command      = ./early/scripts/udev.sh start
 stop-command = ./early/scripts/udev.sh stop
+log-type      = buffer
 depends-on   = early-prepare.target
 depends-on   = early-modules-early
 depends-on   = early-tmpfiles-dev

@@ -2,4 +2,5 @@
 
 type       = scripted
 command    = ./early/scripts/udev.sh trigger
+log-type    = buffer
 depends-on = early-udevd

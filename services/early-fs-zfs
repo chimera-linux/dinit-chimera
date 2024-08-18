@@ -2,5 +2,6 @@
 
 type       = scripted
 command    = ./early/scripts/fs-zfs.sh
+log-type    = buffer
 depends-on = early-fs-pre.target
 options    = starts-on-console
