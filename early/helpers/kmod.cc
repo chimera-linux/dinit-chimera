@@ -358,7 +358,6 @@ int main(int argc, char **argv) {
                 break;
             }
         }
-        return 0;
     }
 
     if (is_static_mods) {
