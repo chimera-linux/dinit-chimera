@@ -276,8 +276,9 @@ int main(int argc, char **argv) {
     std::vector<std::string const *> ord_list;
     std::vector<char const *> cmdl_mods;
     char *line = nullptr;
-    char *cmdp = nullptr;
     std::size_t len = 0;
+    /* we cannot seek on kernel cmdline, but it has a guaranteed max length */
+    char kerncmd[4097] = {};
     int ret = 0;
 
     kernel_blacklist = &kern_bl;
@@ -292,18 +293,14 @@ int main(int argc, char **argv) {
     /* modules_load, modules-load, module_blacklist */
     FILE *cmdl = std::fopen("/proc/cmdline", "rb");
     if (cmdl) {
-        std::fseek(cmdl, 0, SEEK_END);
-        auto fs = std::ftell(cmdl);
-        std::fseek(cmdl, 0, SEEK_SET);
-        cmdp = static_cast<char *>(std::malloc(fs + 1));
-        cmdp[fs] = '\0';
-        if (long(std::fread(cmdp, 1, fs, cmdl)) != fs) {
-            std::free(cmdp);
-            err(1, "fread");
+        auto len = std::fread(kerncmd, 1, sizeof(kerncmd) - 1, cmdl);
+        if ((len > 0) && (kerncmd[len - 1] == '\n')) {
+            /* may end with a trailing newline */
+            kerncmd[len - 1] = '\0';
         }
-        for (char *p = cmdp; (p = std::strstr(p, "module"));) {
+        for (char *p = kerncmd; (p = std::strstr(p, "module"));) {
             /* inside of a param, skip */
-            if ((p != cmdp) && p[-1] && (p[-1] != ' ')) {
+            if ((p != kerncmd) && p[-1] && (p[-1] != ' ')) {
                 p += 6;
                 continue;
             }
@@ -420,7 +417,6 @@ int main(int argc, char **argv) {
     }
 do_ret:
     std::free(line);
-    std::free(cmdp);
     if (kctx) {
         kmod_unref(kctx);
     }
