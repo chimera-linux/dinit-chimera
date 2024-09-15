@@ -41,13 +41,17 @@ exit with success if the tools aren't located.
 * [LVM2](https://sourceware.org/lvm2)
 * [Btrfs](https://btrfs.readthedocs.io/en/latest)
 * [ZFS](https://openzfs.github.io/openzfs-docs)
+* [makedumpfile](https://github.com/makedumpfile/makedumpfile)
+  * For kernel crashdump support
+* [kexec-tools](https://kernel.org/pub/linux/utils/kernel/kexec)
+  * For kernel crashdump support
 
 ## Service targets
 
 The collection provides special "target" services, suffixed with `.target`,
 which can be used as dependencies for third party service files as well as
 for ordering.
-
+a
 Until better documentation is in place, here is the list, roughly in bootup
 order. The actual order may vary somewhat because of parallel startup. In
 general your services should specify dependency links and ordering links

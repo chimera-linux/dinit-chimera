@@ -1,0 +1,6 @@
+# handle kernel crash dump
+
+type       = scripted
+command    = ./early/scripts/kdump.sh
+depends-on = early-devices.target
+depends-on = early-fs-local.target

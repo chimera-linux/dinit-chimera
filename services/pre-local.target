@@ -11,3 +11,4 @@ waits-for  = early-rng
 waits-for  = early-machine-id
 waits-for  = early-sysctl
 waits-for  = early-binfmt
+waits-for  = early-kdump
