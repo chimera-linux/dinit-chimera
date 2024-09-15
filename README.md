@@ -51,7 +51,7 @@ exit with success if the tools aren't located.
 The collection provides special "target" services, suffixed with `.target`,
 which can be used as dependencies for third party service files as well as
 for ordering.
-a
+
 Until better documentation is in place, here is the list, roughly in bootup
 order. The actual order may vary somewhat because of parallel startup. In
 general your services should specify dependency links and ordering links
