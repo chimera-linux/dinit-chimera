@@ -1,5 +1,0 @@
-# Trigger udev events for already-present devices
-
-type       = scripted
-command    = ./early/scripts/udev.sh trigger
-depends-on = early-udevd

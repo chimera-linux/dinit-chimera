@@ -1,6 +1,0 @@
-# Wait until all queued udev events have been processed
-
-type       = scripted
-command    = ./early/scripts/udev.sh settle
-depends-on = early-udevd
-depends-on = early-udev-trigger

@@ -55,6 +55,7 @@ scripts = [
     'common.sh',
     'console.sh',
     'cryptdisks.sh',
+    'dev.sh',
     'dmraid.sh',
     'done.sh',
     'env.sh',
@@ -80,7 +81,6 @@ scripts = [
     'sysctl.sh',
     'tmpfs.sh',
     'tmpfiles.sh',
-    'udev.sh',
 ]
 
 foreach scr: scripts
@@ -131,9 +131,9 @@ services = [
     'early-tmpfs',
     'early-tmpfiles',
     'early-tmpfiles-dev',
-    'early-udev-settle',
-    'early-udev-trigger',
-    'early-udevd',
+    'early-dev-settle',
+    'early-dev-trigger',
+    'early-devd',
     'local.target',
     'login.target',
     'network.target',

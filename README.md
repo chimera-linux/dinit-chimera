@@ -23,7 +23,7 @@ Currently the documentation for the suite is lacking, which is also to be done.
 * `mount`, `umount`
   * Implementation must support `-a`
 * `sulogin` (any implementation)
-* `systemd-udev` (`eudev` will work with some path changes)
+* A device manager such as `udev`; an abstraction script must be provided
 
 ### Optional dependencies
 
@@ -51,7 +51,7 @@ exit with success if the tools aren't located.
 The collection provides special "target" services, suffixed with `.target`,
 which can be used as dependencies for third party service files as well as
 for ordering.
-a
+
 Until better documentation is in place, here is the list, roughly in bootup
 order. The actual order may vary somewhat because of parallel startup. In
 general your services should specify dependency links and ordering links
