@@ -5,12 +5,6 @@ DINIT_NO_CONTAINER=1
 
 . ./early/scripts/common.sh
 
-command -v setupcon > /dev/null 2>&1 || exit 0
+[ -x /usr/libexec/dinit-console ] || exit 0
 
-if [ "$1" = "keyboard" ]; then
-    set -- "-k"
-else
-    set --
-fi
-
-exec setupcon "$@"
+exec /usr/libexec/dinit-console "$1"

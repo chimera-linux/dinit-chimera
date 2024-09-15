@@ -23,7 +23,47 @@ Currently the documentation for the suite is lacking, which is also to be done.
 * `mount`, `umount`
   * Implementation must support `-a`
 * `sulogin` (any implementation)
-* A device manager such as `udev`; an abstraction script must be provided
+
+### Distribution-provided files
+
+The distribution should provide the following helpers:
+
+* `/usr/libexec/dinit-console`
+  * Perform console and keyboard setup; optional
+* `/usr/libexec/dinit-devd`
+  * Perform device initialization; mandatory
+
+The `dinit-console` may look like this when using `console-setup`:
+
+```
+#!/bin/sh
+
+if [ "$1" = "keyboard" ]; then
+    set -- "-k"
+else
+    set --
+fi
+
+exec setupcon "$@"
+```
+
+The `dinit-udev` may look like this when using `udev`:
+
+```
+#!/bin/sh
+
+case "$1" in
+    start) exec /usr/libexec/udevd --daemon ;;
+    stop) udevadm control -e || : ;;
+    settle) exec udevadm settle ;;
+    trigger) exec udevadm trigger --action=add ;;
+esac
+
+exit 1
+```
+
+Note that currently the behaviors are subject to change. Adopters should
+watch out for such changes and adjust their scripts accordingly.
 
 ### Optional dependencies
 
@@ -34,8 +74,6 @@ exit with success if the tools aren't located.
 * `fsck`
   * Without it, early file system checks won't be available
   * Tested with `util-linux`, others may work
-* [console-setup](https://salsa.debian.org/installer-team/console-setup)
-  * For console keymap, font and so on.
 * [mdadm](https://git.kernel.org/pub/scm/utils/mdadm/mdadm.git)
 * [dmraid](https://people.redhat.com/~heinzm/sw/dmraid)
 * [LVM2](https://sourceware.org/lvm2)
