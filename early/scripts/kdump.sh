@@ -32,8 +32,8 @@ if [ -e /proc/vmcore ] && ! grep -q nokdump /proc/cmdline; then
     exit 0
 fi
 
+# crashkernel=NNN not specified (default), silently succeed
 if [ "$(cat /sys/kernel/kexec_crash_size)" = "0" ]; then
-    echo "WARNING: booted without crashkernel=NNN, skipping loading crash kernel..."
     exit 0
 fi
 
