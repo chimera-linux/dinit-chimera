@@ -47,7 +47,7 @@ fi
 exec setupcon "$@"
 ```
 
-The `dinit-udev` may look like this when using `udev`:
+The `dinit-devd` may look like this when using `udev`:
 
 ```
 #!/bin/sh
