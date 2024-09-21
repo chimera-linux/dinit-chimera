@@ -81,6 +81,7 @@ scripts = [
     'sysctl.sh',
     'tmpfs.sh',
     'tmpfiles.sh',
+    'try-kdump.sh',
 ]
 
 foreach scr: scripts
