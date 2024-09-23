@@ -66,7 +66,7 @@ for rd in /boot/initr*${KERNVER}*kdump* /boot/initr*${KERNVER}*; do
 done
 
 if [ -z "$INITRAMFS" ]; then
-    echo "WARNING: could not find initramfs for '$KERNVER}', skipping initramfs loading..."
+    echo "WARNING: could not find initramfs for '${KERNVER}', skipping initramfs loading..."
 fi
 
 # may need adjusting
