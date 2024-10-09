@@ -9,7 +9,9 @@ export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 log_debug() {
     [ -n "$DINIT_EARLY_DEBUG" ] || return 0
     echo "INIT:" "$@"
-    [ -n "$DINIT_EARLY_DEBUG_SLOW" ] && sleep "$DINIT_EARLY_DEBUG_SLOW"
+    if [ -n "$DINIT_EARLY_DEBUG_SLOW" ]; then
+        sleep "$DINIT_EARLY_DEBUG_SLOW"
+    fi
 }
 
 # if requested, append all to logfile
