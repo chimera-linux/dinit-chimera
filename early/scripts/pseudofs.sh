@@ -36,3 +36,7 @@ fi
 if [ -d /sys/firmware/efi/efivars ]; then
     mntpt /sys/firmware/efi/efivars || mount -o nosuid,noexec,nodev -t efivarfs efivarfs /sys/firmware/efi/efivars
 fi
+
+if [ -d /sys/fs/selinux ]; then
+    mntpt /sys/fs/selinux || mount -t selinuxfs selinuxfs /sys/fs/selinux
+fi
