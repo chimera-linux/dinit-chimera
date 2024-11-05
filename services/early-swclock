@@ -5,5 +5,5 @@ command      = ./early/scripts/clock.sh swclock start
 stop-command = ./early/scripts/clock.sh swclock stop
 depends-on   = early-devd
 depends-on   = early-prepare.target
-depends-on   = early-root-rw.target
+depends-on   = early-fs-local.target
 waits-for    = early-hwclock
