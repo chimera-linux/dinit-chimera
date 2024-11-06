@@ -113,7 +113,7 @@ foreach scr: scripts
     if scr.endswith('.in')
         configure_file(
             input: 'early/scripts/' + scr,
-            output: 'generated-' + scr.substring(0, -3),
+            output: scr.substring(0, -3),
             configuration: confd,
             format: 'cmake@',
             install_dir: earlydir / 'scripts',
