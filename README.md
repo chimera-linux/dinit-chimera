@@ -26,7 +26,8 @@ Currently the documentation for the suite is lacking, which is also to be done.
 
 ### Distribution-provided files
 
-The distribution should provide the following helpers:
+The distribution should provide the following helpers (the paths are the
+defaults, they may be altered with meson options):
 
 * `/usr/libexec/dinit-console`
   * Perform console and keyboard setup; optional
