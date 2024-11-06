@@ -1,0 +1,17 @@
+option('bless-boot-path',
+    type: 'string',
+    value: '',
+    description: 'path to systemd-bless-boot (default: libexecdir/systemd-bless-boot)'
+)
+
+option('dinit-console-path',
+    type: 'string',
+    value: '',
+    description: 'path to dinit-console (default: libexecdir/dinit-console)'
+)
+
+option('dinit-devd-path',
+    type: 'string',
+    value: '',
+    description: 'path to dinit-devd (default: libexecdir/dinit-console)'
+)
