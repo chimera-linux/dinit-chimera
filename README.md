@@ -127,7 +127,6 @@ services should not have to depend on `early-prepare.target` and so on.
 * `early-devices.target` - device events have been processed
   * This means `/dev` is fully populated with quirks applied and so on.
 * `early-keyboard.target` - console keymap has been set
-  * This has no effect when `setupcon` from `console-setup` is not available.
 * `early-fs-pre.target` - filesystems are ready to be checked and mounted
   * This means encrypted disks, RAID, LVM and so on is up.
 * `early-root-rw.target` - root filesystem has been re-mounted read/write.
@@ -136,7 +135,6 @@ services should not have to depend on `early-prepare.target` and so on.
 * `early-fs-local.target` - non-network filesystems have finished mounting
   * This includes the above plus non-`fstab` filesystems such as ZFS.
 * `early-console.target` - follow-up to `early-keyboard.target` (console font, etc.)
-  * This has no effect when `setupcon` from `console-setup` is not available.
 * `pre-local.target` - most important early oneshots have run.
   * Temporary/volatile files/dirs managed with `tmpfiles.d` are not guaranteed yet.
   * Most services should prefer `local.target` as their sentinel.
