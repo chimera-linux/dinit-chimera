@@ -1,7 +1,7 @@
 # crypt devices not dependent on lvm
 
 type       = scripted
-command    = ./early/scripts/cryptdisks.sh early start
+command    = @SCRIPT_PATH@/cryptdisks.sh early start
 depends-on = early-devices.target
 depends-on = early-keyboard.target
 depends-ms = early-root-fsck

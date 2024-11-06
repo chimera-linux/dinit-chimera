@@ -1,7 +1,7 @@
 # Check the root filesystem, interruptible with ^C
 
 type          = scripted
-command       = ./early/scripts/root-fsck.sh
+command       = @SCRIPT_PATH@/root-fsck.sh
 start-timeout = 0 # unlimited
 depends-on    = early-prepare.target
 depends-ms    = early-devd

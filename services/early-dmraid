@@ -1,6 +1,6 @@
 # dmraid setup
 
 type       = scripted
-command    = ./early/scripts/dmraid.sh
+command    = @SCRIPT_PATH@/dmraid.sh
 depends-on = early-devices.target
 depends-ms = early-root-fsck

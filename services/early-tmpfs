@@ -1,6 +1,6 @@
 # Mount some early temp filesystems
 
 type       = scripted
-command    = ./early/scripts/tmpfs.sh
+command    = @SCRIPT_PATH@/tmpfs.sh
 depends-on = early-env
 depends-on = early-root-remount

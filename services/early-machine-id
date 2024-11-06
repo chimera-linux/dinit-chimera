@@ -1,7 +1,7 @@
 # try our best to make sure /etc/machine-id is available
 
 type       = scripted
-command    = ./early/scripts/machine-id.sh
+command    = @SCRIPT_PATH@/machine-id.sh
 depends-on = early-rng
 depends-on = early-swclock
 waits-for  = early-root-rw.target

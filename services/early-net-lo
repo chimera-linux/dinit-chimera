@@ -1,5 +1,5 @@
 # set up the loopback interface
 
 type       = scripted
-command    = ./early/scripts/net-lo.sh
+command    = @SCRIPT_PATH@/net-lo.sh
 depends-on = early-devices.target

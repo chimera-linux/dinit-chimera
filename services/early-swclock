@@ -1,8 +1,8 @@
 # Adjust system date/time as necessary by timestamp/rtc
 
 type         = scripted
-command      = ./early/scripts/clock.sh swclock start
-stop-command = ./early/scripts/clock.sh swclock stop
+command      = @SCRIPT_PATH@/clock.sh swclock start
+stop-command = @SCRIPT_PATH@/clock.sh swclock stop
 depends-on   = early-devd
 depends-on   = early-prepare.target
 depends-on   = early-fs-local.target

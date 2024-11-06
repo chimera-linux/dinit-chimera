@@ -1,7 +1,7 @@
 # core system init has been done
 
 type       = scripted
-command    = ./early/scripts/done.sh
+command    = @SCRIPT_PATH@/done.sh
 depends-on = early-fs-local.target
 depends-on = early-console.target
 depends-on = early-net-lo

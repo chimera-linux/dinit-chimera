@@ -1,6 +1,6 @@
 # Wait until all queued device events have been processed
 
 type       = scripted
-command    = ./early/scripts/dev.sh settle
+command    = @SCRIPT_PATH@/dev.sh settle
 depends-on = early-devd
 depends-on = early-dev-trigger

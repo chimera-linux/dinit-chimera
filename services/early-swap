@@ -1,5 +1,5 @@
 # btrfs setup
 
 type       = scripted
-command    = ./early/scripts/swap.sh start
+command    = @SCRIPT_PATH@/swap.sh start
 depends-on = early-fs-local.target

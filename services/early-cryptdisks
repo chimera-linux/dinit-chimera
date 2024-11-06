@@ -1,7 +1,7 @@
 # all remaining crypt devices
 
 type       = scripted
-command    = ./early/scripts/cryptdisks.sh remaining start
+command    = @SCRIPT_PATH@/cryptdisks.sh remaining start
 depends-on = early-devices.target
 depends-on = early-cryptdisks-early
 depends-on = early-dmraid

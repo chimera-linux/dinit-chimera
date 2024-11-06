@@ -1,5 +1,5 @@
 # set up the hostname
 
 type       = scripted
-command    = ./early/scripts/hostname.sh
+command    = @SCRIPT_PATH@/hostname.sh
 depends-on = early-devices.target

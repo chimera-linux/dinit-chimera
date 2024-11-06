@@ -1,6 +1,6 @@
 # mdadm setup
 
 type       = scripted
-command    = ./early/scripts/mdadm.sh
+command    = @SCRIPT_PATH@/mdadm.sh
 depends-on = early-devices.target
 depends-ms = early-root-fsck

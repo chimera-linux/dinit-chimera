@@ -2,5 +2,5 @@
 # can be run earlier than full console setup
 
 type       = scripted
-command    = ./early/scripts/console.sh keyboard
+command    = @SCRIPT_PATH@/console.sh keyboard
 depends-on = early-devices.target

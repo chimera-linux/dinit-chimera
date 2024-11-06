@@ -43,6 +43,11 @@ confd.set_quoted('BLESS_BOOT_PATH', bless_boot_path)
 confd.set_quoted('DINIT_CONSOLE_PATH', dinit_console_path)
 confd.set_quoted('DINIT_DEVD_PATH', dinit_devd_path)
 
+svconfd = configuration_data()
+
+svconfd.set('EARLY_PATH', pfx / srvdir / 'early')
+svconfd.set('SCRIPT_PATH', pfx / srvdir / 'early/scripts')
+
 helpers = [
     ['binfmt',  ['early/helpers/binfmt.cc'], []],
     ['hwclock', ['early/helpers/hwclock.cc'], []],
@@ -116,6 +121,7 @@ foreach scr: scripts
             output: scr.substring(0, -3),
             configuration: confd,
             format: 'cmake@',
+            install: true,
             install_dir: earlydir / 'scripts',
             install_mode: 'rwxr-xr-x',
         )
@@ -183,8 +189,12 @@ services = [
 ]
 
 foreach srv: services
-    install_data(
-        'services/' + srv,
+    configure_file(
+        input: 'services/' + srv,
+        output: srv,
+        configuration: svconfd,
+        format: 'cmake@',
+        install: true,
         install_dir: srvdir,
         install_mode: 'rw-r--r--',
     )

@@ -2,8 +2,8 @@
 # later replaced with a real supervised service once everything else is up
 
 type         = scripted
-command      = ./early/scripts/dev.sh start
-stop-command = ./early/scripts/dev.sh stop
+command      = @SCRIPT_PATH@/dev.sh start
+stop-command = @SCRIPT_PATH@/dev.sh stop
 depends-on   = early-prepare.target
 depends-on   = early-modules-early
 depends-on   = early-tmpfiles-dev
