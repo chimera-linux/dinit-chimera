@@ -2,6 +2,6 @@
 
 DINIT_SERVICE=sysctl
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
-exec ./early/helpers/sysctl
+exec @HELPER_PATH@/sysctl

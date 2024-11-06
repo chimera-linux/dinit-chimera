@@ -6,7 +6,7 @@ DINIT_NO_CONTAINER=1
 
 set -e
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
 # this is optional functionality
 command -v makedumpfile > /dev/null 2>&1 || exit 0

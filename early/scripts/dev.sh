@@ -8,6 +8,6 @@ esac
 
 DINIT_NO_CONTAINER=1
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
 exec @DINIT_DEVD_PATH@ "$1"

@@ -2,7 +2,7 @@
 
 DINIT_SERVICE=local
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
 [ -x /etc/rc.local ] && /etc/rc.local
 

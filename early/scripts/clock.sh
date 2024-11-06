@@ -3,7 +3,7 @@
 DINIT_SERVICE="${1:-clock}"
 DINIT_NO_CONTAINER=1
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
 [ -r /etc/hwclock ] && read -r HWCLOCK < /etc/hwclock
 
@@ -25,4 +25,4 @@ case "$HWCLOCK" in
     *) set -- "$1" ;;
 esac
 
-exec "./early/helpers/${HELPER}" "$@"
+exec "@HELPER_PATH@/${HELPER}" "$@"

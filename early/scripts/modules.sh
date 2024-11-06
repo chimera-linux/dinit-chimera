@@ -3,6 +3,6 @@
 DINIT_SERVICE=modules
 DINIT_NO_CONTAINER=1
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
-exec ./early/helpers/kmod modules
+exec @HELPER_PATH@/kmod modules

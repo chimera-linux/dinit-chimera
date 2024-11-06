@@ -3,7 +3,7 @@
 DINIT_SERVICE=fs-fsck
 DINIT_NO_CONTAINER=1
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
 command -v fsck > /dev/null 2>&1 || exit 0
 

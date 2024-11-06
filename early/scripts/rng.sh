@@ -3,6 +3,6 @@
 DINIT_SERVICE=rng
 DINIT_NO_CONTAINER=1
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
-exec ./early/helpers/seedrng
+exec @HELPER_PATH@/seedrng

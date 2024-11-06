@@ -7,10 +7,10 @@ DINIT_SERVICE=done
 # the mount test would fail, might as well just skip it altogether
 DINIT_NO_CONTAINER=1
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
 # was never bind-mounted, so just exit
-./early/helpers/mntpt /etc/machine-id || exit 0
+@HELPER_PATH@/mntpt /etc/machine-id || exit 0
 # no generated machine-id
 test -e /run/dinit/machine-id || exit 0
 

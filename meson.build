@@ -43,9 +43,14 @@ confd.set_quoted('BLESS_BOOT_PATH', bless_boot_path)
 confd.set_quoted('DINIT_CONSOLE_PATH', dinit_console_path)
 confd.set_quoted('DINIT_DEVD_PATH', dinit_devd_path)
 
+confd.set('EARLY_PATH', pfx / srvdir / 'early')
+confd.set('HELPER_PATH', pfx / srvdir / 'early/helpers')
+confd.set('SCRIPT_PATH', pfx / srvdir / 'early/scripts')
+
 svconfd = configuration_data()
 
 svconfd.set('EARLY_PATH', pfx / srvdir / 'early')
+svconfd.set('HELPER_PATH', pfx / srvdir / 'early/helpers')
 svconfd.set('SCRIPT_PATH', pfx / srvdir / 'early/scripts')
 
 helpers = [
@@ -79,13 +84,13 @@ endforeach
 
 scripts = [
     'binfmt.sh',
-    'bless-boot.sh.in',
+    'bless-boot.sh',
     'cgroups.sh',
     'clock.sh',
     'common.sh',
-    'console.sh.in',
+    'console.sh',
     'cryptdisks.sh',
-    'dev.sh.in',
+    'dev.sh',
     'dmraid.sh',
     'done.sh',
     'env.sh',
@@ -115,23 +120,15 @@ scripts = [
 ]
 
 foreach scr: scripts
-    if scr.endswith('.in')
-        configure_file(
-            input: 'early/scripts/' + scr,
-            output: scr.substring(0, -3),
-            configuration: confd,
-            format: 'cmake@',
-            install: true,
-            install_dir: earlydir / 'scripts',
-            install_mode: 'rwxr-xr-x',
-        )
-    else
-        install_data(
-            'early/scripts/' + scr,
-            install_dir: earlydir / 'scripts',
-            install_mode: 'rwxr-xr-x',
-        )
-    endif
+    configure_file(
+        input: 'early/scripts/' + scr,
+        output: scr,
+        configuration: confd,
+        format: 'cmake@',
+        install: true,
+        install_dir: earlydir / 'scripts',
+        install_mode: 'rwxr-xr-x',
+    )
 endforeach
 
 services = [
@@ -201,8 +198,12 @@ foreach srv: services
 endforeach
 
 # shutdown hook for oneshot actions
-install_data(
-    'shutdown-hook',
+configure_file(
+    input: 'shutdown-hook',
+    output: 'shutdown-hook',
+    configuration: confd,
+    format: 'cmake@',
+    install: true,
     install_dir: dlibdir,
     install_mode: 'rwxr-xr-x',
 )

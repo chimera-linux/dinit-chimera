@@ -7,7 +7,7 @@
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin
 
 # assume proper directory
-cd /usr/lib/dinit.d
+cd @EARLY_PATH@/..
 
 if [ ! -e /run/dinit/container ]; then
     echo "Disabling swap..."

@@ -4,12 +4,12 @@ DINIT_SERVICE=pseudofs
 # can't mount in containers
 DINIT_NO_CONTAINER=1
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
 set -e
 
 mntpt() {
-    ./early/helpers/mntpt "$@"
+    @HELPER_PATH@/mntpt "$@"
 }
 
 mntpt /proc || mount -o nosuid,noexec,nodev -t proc     proc /proc

@@ -3,7 +3,7 @@
 DINIT_SERVICE=bless-boot
 DINIT_NO_CONTAINER=1
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
 bless=@BLESS_BOOT_PATH@
 

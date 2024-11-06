@@ -5,7 +5,7 @@
 
 DINIT_SERVICE=machine-id
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
 set -e
 umask 022

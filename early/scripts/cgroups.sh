@@ -5,12 +5,12 @@ DINIT_NO_CONTAINER=1
 
 set -e
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
 CG_PATH="/sys/fs/cgroup"
 
 mkdir -p "$CG_PATH"
-./early/helpers/mntpt "$CG_PATH" || mount -t cgroup2 -o nsdelegate cgroup2 "/sys/fs/cgroup"
+@HELPER_PATH@/mntpt "$CG_PATH" || mount -t cgroup2 -o nsdelegate cgroup2 "/sys/fs/cgroup"
 
 # just in case
 [ -e "${CG_PATH}/cgroup.subtree_control" ] || exit 0

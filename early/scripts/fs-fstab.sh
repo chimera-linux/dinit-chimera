@@ -3,7 +3,7 @@
 DINIT_SERVICE=fs-fstab
 DINIT_NO_CONTAINER=1
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
 case "$1" in
     start)

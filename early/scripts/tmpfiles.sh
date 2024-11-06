@@ -2,7 +2,7 @@
 
 DINIT_SERVICE=tmpfiles
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
 sd-tmpfiles "$@"
 

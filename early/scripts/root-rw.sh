@@ -3,7 +3,7 @@
 DINIT_SERVICE=root-rw
 DINIT_NO_CONTAINER=1
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
 # do not remount as rw if the intent is to stay as ro
 if [ -r /etc/fstab ]; then

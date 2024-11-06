@@ -3,6 +3,6 @@
 DINIT_SERVICE=swap
 DINIT_NO_CONTAINER=1
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
-exec ./early/helpers/swap "$1"
+exec @HELPER_PATH@/swap "$1"

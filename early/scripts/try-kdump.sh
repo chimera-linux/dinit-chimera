@@ -1,5 +1,5 @@
 #!/bin/sh
 
-[ -x "./early/scripts/kdump.sh" ] || exit 0
+[ -x "@SCRIPT_PATH@/kdump.sh" ] || exit 0
 
-exec ./early/scripts/kdump.sh "$@"
+exec @SCRIPT_PATH@/kdump.sh "$@"

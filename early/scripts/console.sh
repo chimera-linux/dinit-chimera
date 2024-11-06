@@ -3,7 +3,7 @@
 DINIT_SERVICE=${1:-console}
 DINIT_NO_CONTAINER=1
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
 [ -x @DINIT_CONSOLE_PATH@ ] || exit 0
 

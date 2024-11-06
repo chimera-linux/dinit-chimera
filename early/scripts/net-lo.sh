@@ -2,6 +2,6 @@
 
 DINIT_SERVICE=net-lo
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
-exec ./early/helpers/lo
+exec @HELPER_PATH@/lo

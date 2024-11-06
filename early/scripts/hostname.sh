@@ -2,7 +2,7 @@
 
 DINIT_SERVICE=hostname
 
-. ./early/scripts/common.sh
+. @SCRIPT_PATH@/common.sh
 
 [ -r /etc/hostname ] && read -r HOSTNAME < /etc/hostname
 [ -z "$HOSTNAME"   ] && HOSTNAME=chimera
