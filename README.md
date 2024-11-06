@@ -13,16 +13,15 @@ Currently the documentation for the suite is lacking, which is also to be done.
 ## Dependencies
 
 * [dinit](https://github.com/davmac314/dinit) (0.18.0 or newer)
-* Basic core utilities
-  * [chimerautils](https://github.com/chimera-linux/chimerautils) is most tested
-  * GNU coreutils, busybox etc. may work (patches welcome)
-* [sd-tools](https://github.com/chimera-linux/sd-tools) (particularly `sd-tmpfiles`)
-* [libkmod](https://github.com/kmod-project/kmod)
-* POSIX shell
-* `awk` (POSIX will do)
+* POSIX core utilities
+  * We test [chimerautils](https://github.com/chimera-linux/chimerautils)
+  * Others are supported (GNU, `busybox`, etc.); issues should be reported
+  * Needs at least coreutils equivalent, `awk`, and `sh`
 * `mount`, `umount`
   * Implementation must support `-a`
-* `sulogin` (any implementation)
+* `sulogin` (any implementation, e.g. `shadow`, `util-linux`, `busybox`)
+* [sd-tools](https://github.com/chimera-linux/sd-tools) (particularly `sd-tmpfiles`)
+* [libkmod](https://github.com/kmod-project/kmod)
 
 ### Distribution-provided files
 
