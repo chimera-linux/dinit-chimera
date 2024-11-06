@@ -2,6 +2,7 @@ confd = configuration_data()
 
 confd.set_quoted('BLESS_BOOT_PATH', bless_boot_path)
 confd.set_quoted('DINIT_CONSOLE_PATH', dinit_console_path)
+confd.set_quoted('DINIT_CRYPTDISKS_PATH', dinit_cryptdisks_path)
 confd.set_quoted('DINIT_DEVD_PATH', dinit_devd_path)
 
 confd.set('EARLY_PATH', pfx / srvdir / 'early')

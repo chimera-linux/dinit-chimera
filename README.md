@@ -31,6 +31,8 @@ defaults, they may be altered with meson options):
 
 * `/usr/libexec/dinit-console`
   * Perform console and keyboard setup; optional
+* `/usr/libexec/dinit-cryptdisks`
+  * Perform encrypted drive setup; optional
 * `/usr/libexec/dinit-devd`
   * Perform device initialization; mandatory
 
@@ -47,6 +49,28 @@ fi
 
 exec setupcon "$@"
 ```
+
+The `dinit-cryptdisks` may look like this when using Debian `cryptsetup` scripts:
+
+```
+#!/bin/sh
+
+[ -r /usr/lib/cryptsetup/cryptdisks-functions ] || exit 0
+[ -r /etc/crypttab ] || exit 0
+
+. /usr/lib/cryptsetup/cryptdisks-functions
+
+INITSTATE="$1"
+
+case "$2" in
+    start) do_start ;;
+    stop) do_stop ;;
+    *) exit 1 ;;
+esac
+```
+
+It is passed two arguments, the first one is either `early` or `remaining`
+while the second one is either `start` or `stop`.
 
 The `dinit-devd` may look like this when using `udev`:
 

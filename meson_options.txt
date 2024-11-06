@@ -10,6 +10,12 @@ option('dinit-console-path',
     description: 'path to dinit-console (default: libexecdir/dinit-console)'
 )
 
+option('dinit-cryptdisks-path',
+    type: 'string',
+    value: '',
+    description: 'path to dinit-cryptdisks (default: libexecdir/dinit-cryptdisks)'
+)
+
 option('dinit-devd-path',
     type: 'string',
     value: '',

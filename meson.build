@@ -23,6 +23,7 @@ kmod_dep = dependency('libkmod')
 
 bless_boot_path = get_option('bless-boot-path')
 dinit_console_path = get_option('dinit-console-path')
+dinit_cryptdisks_path = get_option('dinit-cryptdisks-path')
 dinit_devd_path = get_option('dinit-devd-path')
 
 if bless_boot_path == ''
@@ -31,6 +32,10 @@ endif
 
 if dinit_console_path == ''
     dinit_console_path = pfx / lexecdir / 'dinit-console'
+endif
+
+if dinit_cryptdisks_path == ''
+    dinit_cryptdisks_path = pfx / lexecdir / 'dinit-cryptdisks'
 endif
 
 if dinit_devd_path == ''
