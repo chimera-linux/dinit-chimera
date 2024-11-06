@@ -5,7 +5,7 @@ DINIT_NO_CONTAINER=1
 
 . ./early/scripts/common.sh
 
-bless=/usr/libexec/systemd-bless-boot
+bless=@BLESS_BOOT_PATH@
 
 [ -x $bless ] || exit 0
 

@@ -3,6 +3,7 @@ project(
     ['cpp'],
     version: '0.99.12',
     default_options: [
+        'prefix=/usr',
         'cpp_std=c++17',
         'cpp_eh=none', 'cpp_rtti=false',
         'warning_level=3',
@@ -11,12 +12,36 @@ project(
     license: 'BSD-2-Clause',
 )
 
+pfx = get_option('prefix')
+lexecdir = get_option('libexecdir')
 dlibdir = get_option('libdir') / 'dinit'
 tmpfdir = get_option('libdir') / 'tmpfiles.d'
 srvdir = get_option('libdir') / 'dinit.d'
 earlydir = srvdir / 'early'
 
 kmod_dep = dependency('libkmod')
+
+bless_boot_path = get_option('bless-boot-path')
+dinit_console_path = get_option('dinit-console-path')
+dinit_devd_path = get_option('dinit-devd-path')
+
+if bless_boot_path == ''
+    bless_boot_path = pfx / lexecdir / 'systemd-bless-boot'
+endif
+
+if dinit_console_path == ''
+    dinit_console_path = pfx / lexecdir / 'dinit-console'
+endif
+
+if dinit_devd_path == ''
+    dinit_devd_path = pfx / lexecdir / 'dinit-devd'
+endif
+
+confd = configuration_data()
+
+confd.set_quoted('BLESS_BOOT_PATH', bless_boot_path)
+confd.set_quoted('DINIT_CONSOLE_PATH', dinit_console_path)
+confd.set_quoted('DINIT_DEVD_PATH', dinit_devd_path)
 
 helpers = [
     ['binfmt',  ['early/helpers/binfmt.cc'], []],
@@ -49,13 +74,13 @@ endforeach
 
 scripts = [
     'binfmt.sh',
-    'bless-boot.sh',
+    'bless-boot.sh.in',
     'cgroups.sh',
     'clock.sh',
     'common.sh',
-    'console.sh',
+    'console.sh.in',
     'cryptdisks.sh',
-    'dev.sh',
+    'dev.sh.in',
     'dmraid.sh',
     'done.sh',
     'env.sh',
@@ -85,11 +110,22 @@ scripts = [
 ]
 
 foreach scr: scripts
-    install_data(
-        'early/scripts/' + scr,
-        install_dir: earlydir / 'scripts',
-        install_mode: 'rwxr-xr-x',
-    )
+    if scr.endswith('.in')
+        configure_file(
+            input: 'early/scripts/' + scr,
+            output: 'generated-' + scr.substring(0, -3),
+            configuration: confd,
+            format: 'cmake@',
+            install_dir: earlydir / 'scripts',
+            install_mode: 'rwxr-xr-x',
+        )
+    else
+        install_data(
+            'early/scripts/' + scr,
+            install_dir: earlydir / 'scripts',
+            install_mode: 'rwxr-xr-x',
+        )
+    endif
 endforeach
 
 services = [

@@ -10,4 +10,4 @@ DINIT_NO_CONTAINER=1
 
 . ./early/scripts/common.sh
 
-exec /usr/libexec/dinit-devd "$1"
+exec @DINIT_DEVD_PATH@ "$1"
