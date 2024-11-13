@@ -1,5 +1,6 @@
 confd = configuration_data()
 
+confd.set_quoted('DINIT_PATH', dinit_path)
 confd.set_quoted('BLESS_BOOT_PATH', bless_boot_path)
 confd.set_quoted('DINIT_CONSOLE_PATH', dinit_console_path)
 confd.set_quoted('DINIT_CRYPTDISKS_PATH', dinit_cryptdisks_path)
@@ -8,6 +9,8 @@ confd.set_quoted('DINIT_DEVD_PATH', dinit_devd_path)
 confd.set('EARLY_PATH', pfx / srvdir / 'early')
 confd.set('HELPER_PATH', pfx / srvdir / 'early/helpers')
 confd.set('SCRIPT_PATH', pfx / srvdir / 'early/scripts')
+
+confd.set('DEFAULT_PATH_ENV', get_option('default-path-env'))
 
 scripts = [
     'binfmt.sh',
@@ -66,5 +69,16 @@ configure_file(
     format: 'cmake@',
     install: true,
     install_dir: dlibdir,
+    install_mode: 'rwxr-xr-x',
+)
+
+# init file
+configure_file(
+    input: '../../init',
+    output: 'init',
+    configuration: confd,
+    format: 'cmake@',
+    install: true,
+    install_dir: sbindir,
     install_mode: 'rwxr-xr-x',
 )

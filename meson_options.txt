@@ -21,3 +21,9 @@ option('dinit-devd-path',
     value: '',
     description: 'path to dinit-devd (default: libexecdir/dinit-console)'
 )
+
+option('default-path-env',
+    type: 'string',
+    value: '/sbin:/usr/sbin:/bin:/usr/bin',
+    description: 'default PATH to use for init'
+)

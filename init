@@ -1,0 +1,30 @@
+#!/bin/sh
+#
+# Make sure dinit runs with a clean environment,
+# while also ensuring that PATH is set in container
+# environments
+#
+
+# in a container, sanitize PATH and exec directly
+# as we don't have a way to deal with the init env
+# after the fact, and there is no initramfs anyway
+if [ -n "${container+x}" ]; then
+    export PATH=@DEFAULT_PATH_ENV@
+    exec @DINIT_PATH@ "$@"
+fi
+
+# minimal defaults
+set -- PATH=@DEFAULT_PATH_ENV@ HOME=/ @DINIT_PATH@ "$@"
+
+# these need to be readable before we have procfs
+if [ "$dinit_early_debug" ]; then
+    set -- \
+        dinit_early_debug=$dinit_early_debug \
+        dinit_early_debug_slow=$dinit_early_debug_slow \
+        dinit_early_debug_log=$dinit_early_debug_log \
+        "$@"
+fi
+
+# if not a container, exec in a mostly clean env...
+exec /usr/bin/env -i "$@"
+
