@@ -27,4 +27,3 @@ fi
 
 # if not a container, exec in a mostly clean env...
 exec /usr/bin/env -i "$@"
-
