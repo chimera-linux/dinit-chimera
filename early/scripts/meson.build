@@ -30,6 +30,7 @@ scripts = [
     'fs-zfs.sh',
     'hostname.sh',
     'kdump.sh',
+    'kernel-env.sh',
     'local.sh',
     'lvm.sh',
     'machine-id.sh',

@@ -2,5 +2,5 @@
 
 type       = scripted
 command    = @SCRIPT_PATH@/cgroups.sh
-depends-on = early-env
+depends-on = early-kernel-env
 depends-on = early-pseudofs

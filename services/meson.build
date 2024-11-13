@@ -24,6 +24,7 @@ services = [
     'early-hostname',
     'early-hwclock',
     'early-kdump',
+    'early-kernel-env',
     'early-keyboard.target',
     'early-lvm',
     'early-machine-id',
