@@ -5,6 +5,26 @@
 # environments
 #
 
+if [ "$dinit_auto_recovery" = "1" ]; then
+    set -- --auto-recovery "$@"
+fi
+
+if [ "$dinit_quiet" = "1" ]; then
+    set -- --quiet "$@"
+fi
+
+if [ -n "$dinit_log_level" ]; then
+    set -- --log-level "$dinit_log_level" "$@"
+fi
+
+if [ -n "$dinit_console_level" ]; then
+    set -- --console-level "$dinit_console_level" "$@"
+fi
+
+if [ -n "$dinit_log_file" ]; then
+    set -- --log-file "$dinit_log_file" "$@"
+fi
+
 # in a container, sanitize PATH and exec directly
 # as we don't have a way to deal with the init env
 # after the fact, and there is no initramfs anyway
