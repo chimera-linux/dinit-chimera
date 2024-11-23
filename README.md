@@ -108,6 +108,63 @@ exit with success if the tools aren't located.
 * [kexec-tools](https://kernel.org/pub/linux/utils/kernel/kexec)
   * For kernel crashdump support
 
+## Kernel command line
+
+This suite implements a variety of kernel command line parameters that
+you can use for debugging and other purposes.
+
+### Dinit arguments
+
+* `dinit_auto_recovery=1` - passes `--auto-recovery`
+* `dinit_quiet=1` - passes `--quiet`
+* `dinit_log_file=LOGFILE` - passes `--log-file LOGFILE`
+* `dinit_log_level=LOGLEVEL` - passes `--log-level LOGLEVEL`
+* `dinit_console_level=LOGLEVEL` - passes `--console-level LOGLEVEL`
+
+These are notably useful for early boot debugging. There are a lot of
+early services, and if a very early service fails, the real error very
+quickly scrolls past the standard verbose output as services get stopped.
+Previously this required unreliable workarounds like slow-motion screen
+recording; now you can edit your kernel command line and add something
+like `dinit_quiet=1 dinit_console_level=warn` to supress the "started"
+and "stopped" messages.
+
+Additionally, there are more parameters that are purely for the purpose
+of boot debugging and are implemented by `dinit-chimera` itself:
+
+* `dinit_early_debug=1` - enables early debugging, causing each early
+  service to echo a message before it performs its action; the following
+  parameters only take effect if this is set
+* `dinit_early_debug_slow=N` - sleeps `N` seconds after the echo and before
+  performing the action, intentionally slowing down the boot process for
+  better clarity
+* `dinit_early_debug_log=LOGFILE` - instead of the console, all output will
+  be redirected to the `LOGFILE`; note that you have to ensure the location
+  of the file is writable
+
+The debug parameters are subject to change if necessary.
+
+### Fsck arguments
+
+* `fastboot` or `fsck.mode=skip` - skips filesystem checks
+* `forcefsck` or `fsck.mode=force` - passes `-f` to `fsck`
+* `fsckfix` or `fsck.repair=yes` - passes `-y` to `fsck` (do not ask questions)
+* `fsck.repair=no` - passes `-n` to `fsck`
+
+### Kdump arguments
+
+These only apply if the optional kdump service is installed.
+
+* `nokdump` - do not save kernel dump even if `/proc/vmcore` exists
+
+### Tmpfs arguments
+
+* `dinit.runsize=N` or `initramfs.runsize=N` - the `size=` parameter to
+  use when mounting `/run` and `/run/user`; they are equivalent and the
+  former is specific to `dinit`, while the latter exists for compatibility
+  with `initramfs-tools` (as the initramfs will mount `/run` already and
+  then `dinit-chimera` will not). Defaults to `10%`.
+
 ## Service targets
 
 The collection provides special "target" services, suffixed with `.target`,
