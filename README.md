@@ -129,6 +129,8 @@ recording; now you can edit your kernel command line and add something
 like `dinit_quiet=1 dinit_console_level=warn` to supress the "started"
 and "stopped" messages.
 
+These are all unset so they will not make it into the activation environment.
+
 Additionally, there are more parameters that are purely for the purpose
 of boot debugging and are implemented by `dinit-chimera` itself:
 
@@ -142,7 +144,8 @@ of boot debugging and are implemented by `dinit-chimera` itself:
   be redirected to the `LOGFILE`; note that you have to ensure the location
   of the file is writable
 
-The debug parameters are subject to change if necessary.
+The debug parameters are subject to change if necessary. They become a part
+of the global activation environment.
 
 ### Fsck arguments
 
@@ -164,6 +167,13 @@ These only apply if the optional kdump service is installed.
   former is specific to `dinit`, while the latter exists for compatibility
   with `initramfs-tools` (as the initramfs will mount `/run` already and
   then `dinit-chimera` will not). Defaults to `10%`.
+
+### Mount arguments
+
+* `dinit_early_root_remount=VAL` the extra `remount` parameters to use for
+  early root remount; the default is `ro,rshared` - this can be used to prevent
+  read-only remount of the root filesystem, e.g. for debugging. Note that this
+  variable makes it into the global activation environment.
 
 ## Service targets
 

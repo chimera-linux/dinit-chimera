@@ -25,6 +25,9 @@ if [ -n "$dinit_log_file" ]; then
     set -- --log-file "$dinit_log_file" "$@"
 fi
 
+unset dinit_auto_recovery dinit_quiet dinit_log_level
+unset dinit_console_level dinit_log_file
+
 # in a container, sanitize PATH and exec directly
 # as we don't have a way to deal with the init env
 # after the fact, and there is no initramfs anyway
@@ -43,6 +46,11 @@ if [ "$dinit_early_debug" ]; then
         dinit_early_debug_slow=$dinit_early_debug_slow \
         dinit_early_debug_log=$dinit_early_debug_log \
         "$@"
+fi
+
+# also respect this
+if [ "$dinit_early_root_remount" ]; then
+    set -- dinit_early_root_remount=$dinit_early_root_remount "$@"
 fi
 
 # if not a container, exec in a mostly clean env...
