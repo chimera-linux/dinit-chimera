@@ -35,8 +35,7 @@ fi
 
 RUNSIZE="${RUNSIZE:-10%}"
 
-@HELPER_PATH@/mnt is /run || \
-    mount -o "nodev,noexec,nosuid,size=${RUNSIZE},mode=0755" -t tmpfs tmpfs /run
+@HELPER_PATH@/mnt try /run tmpfs tmpfs "nodev,noexec,nosuid,size=${RUNSIZE},mode=0755"
 
 # readable system state
 mkdir -p /run/dinit /run/user
@@ -44,8 +43,7 @@ mkdir -p /run/dinit /run/user
 # mount /run/user at this point, should *not* be noexec (breaks some flatpaks)
 # give it the same max size as /run itself, generally it should be tiny so
 # it does not need the 50% default at any point
-@HELPER_PATH@/mnt is /run/user || \
-    mount -o "nodev,nosuid,size=${RUNSIZE},mode=0755" -t tmpfs tmpfs /run/user
+@HELPER_PATH@/mnt try /run/user tmpfs tmpfs "nodev,nosuid,size=${RUNSIZE},mode=0755"
 
 # now that we a /run, expose container as state file too (for shutdown etc)
 if [ -n "$DINIT_CONTAINER" ]; then

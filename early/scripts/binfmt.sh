@@ -13,7 +13,7 @@ fi
 @HELPER_PATH@/kmod load binfmt_misc
 
 # try to make sure it's mounted too, otherwise binfmt-helper will fail
-@HELPER_PATH@/mnt is /proc/sys/fs/binfmt_misc || mount -o nosuid,noexec,nodev \
-    -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc 2>/dev/null
+@HELPER_PATH@/mnt try /proc/sys/fs/binfmt_misc binfmt_misc binfmt_misc \
+    nosuid,noexec,nodev 2>/dev/null
 
 exec @HELPER_PATH@/binfmt

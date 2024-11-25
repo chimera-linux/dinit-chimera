@@ -12,17 +12,17 @@ mntis() {
     @HELPER_PATH@/mnt is "$@"
 }
 
-mntis /proc || mount -o nosuid,noexec,nodev -t proc     proc /proc
-mntis /sys  || mount -o nosuid,noexec,nodev -t sysfs    sys  /sys
-mntis /dev  || mount -o mode=0755,nosuid    -t devtmpfs dev  /dev
+@HELPER_PATH@/mnt try /proc proc proc nosuid,noexec,nodev
+@HELPER_PATH@/mnt try /sys sys sysfs nosuid,noexec,nodev
+@HELPER_PATH@/mnt try /dev dev devtmpfs mode=0755,nosuid
 
 mkdir -p -m0755 /dev/pts /dev/shm
 
 # provide a fallback in case of failure
 TTY_ENT=$(getent group tty 2>/dev/null) || TTY_ENT="tty:x:5"
 
-mntis /dev/pts || mount -o mode=0620,gid=$(echo $TTY_ENT | cut -d: -f3),nosuid,noexec -n -t devpts devpts /dev/pts
-mntis /dev/shm || mount -o mode=1777,nosuid,nodev -n -t tmpfs shm /dev/shm
+@HELPER_PATH@/mnt try /dev/pts devpts devpts mode=0620,gid=$(echo $TTY_ENT | cut -d: -f3),nosuid,noexec
+@HELPER_PATH@/mnt try /dev/shm shm tmpfs mode=1777,nosuid,nodev
 
 [ -h /dev/fd ] || ln -s /proc/self/fd /dev/fd
 [ -h /dev/stdin ] || ln -s /proc/self/fd/0 /dev/stdin
@@ -30,13 +30,13 @@ mntis /dev/shm || mount -o mode=1777,nosuid,nodev -n -t tmpfs shm /dev/shm
 [ -h /dev/stderr ] || ln -s /proc/self/fd/2 /dev/stderr
 
 if [ -d /sys/kernel/security ]; then
-    mntis /sys/kernel/security || mount -n -t securityfs securityfs /sys/kernel/security
+    @HELPER_PATH@/mnt try /sys/kernel/security securityfs securityfs
 fi
 
 if [ -d /sys/firmware/efi/efivars ]; then
-    mntis /sys/firmware/efi/efivars || mount -o nosuid,noexec,nodev -t efivarfs efivarfs /sys/firmware/efi/efivars
+    @HELPER_PATH@/mnt try /sys/firmware/efi/efivars efivarfs efivarfs nosuid,noexec,nodev
 fi
 
 if [ -d /sys/fs/selinux ]; then
-    mntis /sys/fs/selinux || mount -t selinuxfs selinuxfs /sys/fs/selinux
+    @HELPER_PATH@/mnt try /sys/fs/selinux selinuxfs selinuxfs
 fi
