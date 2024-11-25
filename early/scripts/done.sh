@@ -10,7 +10,7 @@ DINIT_NO_CONTAINER=1
 . @SCRIPT_PATH@/common.sh
 
 # was never bind-mounted, so just exit
-@HELPER_PATH@/mntpt /etc/machine-id || exit 0
+@HELPER_PATH@/mnt is /etc/machine-id || exit 0
 # no generated machine-id
 test -e /run/dinit/machine-id || exit 0
 

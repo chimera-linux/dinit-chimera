@@ -10,7 +10,7 @@ set -e
 CG_PATH="/sys/fs/cgroup"
 
 mkdir -p "$CG_PATH"
-@HELPER_PATH@/mntpt "$CG_PATH" || mount -t cgroup2 -o nsdelegate cgroup2 "/sys/fs/cgroup"
+@HELPER_PATH@/mnt is "$CG_PATH" || mount -t cgroup2 -o nsdelegate cgroup2 "/sys/fs/cgroup"
 
 # just in case
 [ -e "${CG_PATH}/cgroup.subtree_control" ] || exit 0

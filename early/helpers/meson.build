@@ -4,7 +4,7 @@ helpers = [
     ['swclock', ['swclock.cc'], []],
     ['kmod',    ['kmod.cc'], [kmod_dep]],
     ['lo',      ['lo.cc'], []],
-    ['mntpt',   ['mntpt.cc'], []],
+    ['mnt',     ['mnt.cc'], []],
     ['seedrng', ['seedrng.cc'], []],
     ['sysctl',  ['sysctl.cc'], []],
     ['swap',    ['swap.cc'], []],

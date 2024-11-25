@@ -8,21 +8,21 @@ DINIT_NO_CONTAINER=1
 
 set -e
 
-mntpt() {
-    @HELPER_PATH@/mntpt "$@"
+mntis() {
+    @HELPER_PATH@/mnt is "$@"
 }
 
-mntpt /proc || mount -o nosuid,noexec,nodev -t proc     proc /proc
-mntpt /sys  || mount -o nosuid,noexec,nodev -t sysfs    sys  /sys
-mntpt /dev  || mount -o mode=0755,nosuid    -t devtmpfs dev  /dev
+mntis /proc || mount -o nosuid,noexec,nodev -t proc     proc /proc
+mntis /sys  || mount -o nosuid,noexec,nodev -t sysfs    sys  /sys
+mntis /dev  || mount -o mode=0755,nosuid    -t devtmpfs dev  /dev
 
 mkdir -p -m0755 /dev/pts /dev/shm
 
 # provide a fallback in case of failure
 TTY_ENT=$(getent group tty 2>/dev/null) || TTY_ENT="tty:x:5"
 
-mntpt /dev/pts || mount -o mode=0620,gid=$(echo $TTY_ENT | cut -d: -f3),nosuid,noexec -n -t devpts devpts /dev/pts
-mntpt /dev/shm || mount -o mode=1777,nosuid,nodev -n -t tmpfs shm /dev/shm
+mntis /dev/pts || mount -o mode=0620,gid=$(echo $TTY_ENT | cut -d: -f3),nosuid,noexec -n -t devpts devpts /dev/pts
+mntis /dev/shm || mount -o mode=1777,nosuid,nodev -n -t tmpfs shm /dev/shm
 
 [ -h /dev/fd ] || ln -s /proc/self/fd /dev/fd
 [ -h /dev/stdin ] || ln -s /proc/self/fd/0 /dev/stdin
@@ -30,13 +30,13 @@ mntpt /dev/shm || mount -o mode=1777,nosuid,nodev -n -t tmpfs shm /dev/shm
 [ -h /dev/stderr ] || ln -s /proc/self/fd/2 /dev/stderr
 
 if [ -d /sys/kernel/security ]; then
-    mntpt /sys/kernel/security || mount -n -t securityfs securityfs /sys/kernel/security
+    mntis /sys/kernel/security || mount -n -t securityfs securityfs /sys/kernel/security
 fi
 
 if [ -d /sys/firmware/efi/efivars ]; then
-    mntpt /sys/firmware/efi/efivars || mount -o nosuid,noexec,nodev -t efivarfs efivarfs /sys/firmware/efi/efivars
+    mntis /sys/firmware/efi/efivars || mount -o nosuid,noexec,nodev -t efivarfs efivarfs /sys/firmware/efi/efivars
 fi
 
 if [ -d /sys/fs/selinux ]; then
-    mntpt /sys/fs/selinux || mount -t selinuxfs selinuxfs /sys/fs/selinux
+    mntis /sys/fs/selinux || mount -t selinuxfs selinuxfs /sys/fs/selinux
 fi

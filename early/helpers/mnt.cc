@@ -1,9 +1,9 @@
 /*
- * A helper that checks if a path is a mountpoint
+ * A helper for mounts
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2023 q66 <q66@chimera-linux.org>
+ * Copyright (c) 2024 q66 <q66@chimera-linux.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <mntent.h>
+#include <err.h>
+#include <unistd.h>
+#include <sys/mount.h>
 #include <sys/stat.h>
 
 /* fallback; not accurate but good enough for early boot */
@@ -70,7 +73,7 @@ static int mntpt_noproc(char const *inpath, struct stat *st) {
     return (st->st_dev == sdev) && (st->st_ino != sino);
 }
 
-int main(int argc, char **argv) {
+static int do_is(char const *mntpt) {
     struct stat st;
     FILE *sf;
     struct mntent *mn;
@@ -78,16 +81,16 @@ int main(int argc, char **argv) {
     int retval = 1;
 
     /* symbolic link or not given */
-    if ((argc != 2) || lstat(argv[1], &st) || S_ISLNK(st.st_mode)) {
+    if (lstat(mntpt, &st) || S_ISLNK(st.st_mode)) {
         return 1;
     }
 
     sf = setmntent("/proc/self/mounts", "r");
     if (!sf) {
-        return mntpt_noproc(argv[1], &st);
+        return mntpt_noproc(mntpt, &st);
     }
 
-    path = realpath(argv[1], nullptr);
+    path = realpath(mntpt, nullptr);
     if (!path) {
         return 1;
     }
@@ -102,4 +105,20 @@ int main(int argc, char **argv) {
     endmntent(sf);
     free(path);
     return retval;
+}
+
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        errx(1, "not enough arguments");
+    }
+
+    if (!std::strcmp(argv[1], "is")) {
+        if (argc != 3) {
+            errx(1, "incorrect number of arguments");
+        }
+        return do_is(argv[2]);
+    }
+
+    warnx("unknown command '%s'", argv[1]);
+    return 1;
 }
