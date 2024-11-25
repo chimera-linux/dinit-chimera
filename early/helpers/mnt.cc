@@ -216,7 +216,7 @@ int main(int argc, char **argv) {
             errx(1, "incorrect number of arguments");
         }
         return do_try(argv[2], argv[3], argv[4], (argc < 6) ? nullptr : argv[5]);
-    } else if (!std::strcmp(argv[1], "do")) {
+    } else if (!std::strcmp(argv[1], "mnt")) {
         if ((argc < 5) || (argc > 6)) {
             errx(1, "incorrect number of arguments");
         }

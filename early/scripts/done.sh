@@ -20,7 +20,7 @@ if touch /etc/machine-id > /dev/null 2>&1; then
     cat /run/dinit/machine-id > /etc/machine-id
 else
     # failed to write, bind it again
-    mount -t none -o bind /run/dinit/machine-id /etc/machine-id
+    @HELPER_PATH@/mnt mnt /etc/machine-id /run/dinit/machine-id none bind
 fi
 
 exit 0
