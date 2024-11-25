@@ -14,7 +14,7 @@ DINIT_NO_CONTAINER=1
 # no generated machine-id
 test -e /run/dinit/machine-id || exit 0
 
-umount /etc/machine-id
+@HELPER_PATH@/mnt umnt /etc/machine-id
 
 if touch /etc/machine-id > /dev/null 2>&1; then
     cat /run/dinit/machine-id > /etc/machine-id

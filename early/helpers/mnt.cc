@@ -179,6 +179,21 @@ static unsigned long parse_mntopts(
     return flags;
 }
 
+static int parse_umntopts(char *opts) {
+    if (!opts) {
+        return 0;
+    }
+    int flags = 0;
+    for (char *s; (s = strsep(&opts, ","));) {
+        if (!std::strcmp(s, "force")) {
+            flags |= MNT_FORCE;
+        } else if (!std::strcmp(s, "detach")) {
+            flags |= MNT_DETACH;
+        }
+    }
+    return flags;
+}
+
 static int do_mount(
     char const *tgt, char const *src, char const *fstype, char *opts
 ) {
@@ -201,6 +216,14 @@ static int do_try(
     return do_mount(tgt, src, fstype, opts);
 }
 
+static int do_umount(char const *tgt, char *opts) {
+    if (umount2(tgt, parse_umntopts(opts)) < 0) {
+        warn("umount2");
+        return 1;
+    }
+    return 0;
+}
+
 int main(int argc, char **argv) {
     if (argc < 2) {
         errx(1, "not enough arguments");
@@ -221,6 +244,11 @@ int main(int argc, char **argv) {
             errx(1, "incorrect number of arguments");
         }
         return do_mount(argv[2], argv[3], argv[4], (argc < 6) ? nullptr : argv[5]);
+    } else if (!std::strcmp(argv[1], "umnt")) {
+        if ((argc < 3) || (argc > 4)) {
+            errx(1, "incorrect number of arguments");
+        }
+        return do_umount(argv[2], (argc < 4) ? nullptr : argv[3]);
     }
 
     warnx("unknown command '%s'", argv[1]);
