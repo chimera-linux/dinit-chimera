@@ -30,25 +30,24 @@ if [ -r /proc/cmdline ]; then
     done
 fi
 
-# check fstab for if it should be checked; default is yes
-if [ -r /etc/fstab ]; then
-    ROOTFSPASS=$(awk '{if ($2 == "/") print $6;}' /etc/fstab)
-    # skipped; every other number is treated as that we do check
-    # technically the pass number could be specified as bigger than
-    # for other filesystems, but we don't support this configuration
-    if [ "$ROOTFSPASS" = "0" ]; then
-        echo "Skipping root filesystem check (fs_passno == 0)."
-        exit 0
-    fi
+mntent() {
+    @@HELPER_PATH@@/mnt getent "$1" / "$2" 2>/dev/null
+}
+
+ROOTFSPASS=$(mntent /etc/fstab passno)
+# skipped; every other number is treated as that we do check
+# technically the pass number could be specified as bigger than
+# for other filesystems, but we don't support this configuration
+if [ "$ROOTFSPASS" = "0" ]; then
+    echo "Skipping root filesystem check (fs_passno == 0)."
+    exit 0
 fi
 
-ROOTPAM=$(awk '{OFS=":";if ($2 == "/") print $1,$3;}' /proc/self/mounts)
-
-ROOTDEV=${ROOTPAM%:*}
+ROOTDEV=$(mntent /proc/self/mounts fsname)
 # e.g. zfs will not report a valid block device
 [ -n "$ROOTDEV" -a -b "$ROOTDEV" ] || exit 0
 
-ROOTFSTYPE=${ROOTPAM#*:}
+ROOTFSTYPE=$(mntent /proc/self/mounts type)
 # ensure it's a known filesystem
 [ -n "$ROOTFSTYPE" ] || exit 0
 

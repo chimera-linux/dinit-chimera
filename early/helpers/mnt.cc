@@ -519,6 +519,34 @@ static int do_root_rw() {
     return 0;
 }
 
+static int do_getent(char const *tab, const char *mntpt, char const *ent) {
+    FILE *sf = setmntent(tab, "r");
+    if (!sf) {
+        warn("could not open '%s'", tab);
+        return 1;
+    }
+    for (struct mntent *mn; (mn = getmntent(sf));) {
+        if (strcmp(mn->mnt_dir, mntpt)) {
+            continue;
+        }
+        if (!std::strcmp(ent, "fsname")) {
+            printf("%s\n", mn->mnt_fsname);
+        } else if (!std::strcmp(ent, "type")) {
+            printf("%s\n", mn->mnt_type);
+        } else if (!std::strcmp(ent, "opts")) {
+            printf("%s\n", mn->mnt_opts);
+        } else if (!std::strcmp(ent, "freq")) {
+            printf("%d\n", mn->mnt_freq);
+        } else if (!std::strcmp(ent, "passno")) {
+            printf("%d\n", mn->mnt_passno);
+        } else {
+            warnx("invalid field '%s'", ent);
+            return 1;
+        }
+    }
+    return 0;
+}
+
 int main(int argc, char **argv) {
     if (argc < 2) {
         errx(1, "not enough arguments");
@@ -559,6 +587,11 @@ int main(int argc, char **argv) {
             errx(1, "incorrect number of arguments");
         }
         return do_remount(argv[2], argv[3]);
+    } else if (!std::strcmp(argv[1], "getent")) {
+        if (argc != 5) {
+            errx(1, "incorrect number of arguments");
+        }
+        return do_getent(argv[2], argv[3], argv[4]);
     }
 
     warnx("unknown command '%s'", argv[1]);
