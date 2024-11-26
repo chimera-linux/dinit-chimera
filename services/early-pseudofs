@@ -3,4 +3,3 @@
 type       = scripted
 command    = @SCRIPT_PATH@/pseudofs.sh
 depends-on = early-env
-depends-on = early-root-remount

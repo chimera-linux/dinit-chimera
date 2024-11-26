@@ -8,11 +8,12 @@ DINIT_NO_CONTAINER=1
 
 set -e
 
-mntis() {
-    @HELPER_PATH@/mnt is "$@"
-}
-
 @HELPER_PATH@/mnt try /proc proc proc nosuid,noexec,nodev
+
+# remount root after we have procfs
+mount -o remount,${dinit_early_root_remount:-ro,rshared} /
+
+# then do the rest of the pseudofs shenanigans
 @HELPER_PATH@/mnt try /sys sys sysfs nosuid,noexec,nodev
 @HELPER_PATH@/mnt try /dev dev devtmpfs mode=0755,nosuid
 

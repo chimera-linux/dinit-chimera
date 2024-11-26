@@ -41,7 +41,6 @@ scripts = [
     'pseudofs.sh',
     'rng.sh',
     'root-fsck.sh',
-    'root-remount.sh',
     'root-rw.sh',
     'swap.sh',
     'sysctl.sh',

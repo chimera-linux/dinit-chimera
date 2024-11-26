@@ -3,5 +3,5 @@
 type       = scripted
 command    = @SCRIPT_PATH@/tmpfiles.sh --prefix=/dev --create --boot
 depends-on = early-modules-early
+depends-on = early-pseudofs
 depends-on = early-tmpfs
-depends-on = early-root-remount

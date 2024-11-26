@@ -37,7 +37,6 @@ services = [
     'early-pseudofs',
     'early-rng',
     'early-root-fsck',
-    'early-root-remount',
     'early-root-rw.target',
     'early-swap',
     'early-swclock',
