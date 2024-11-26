@@ -2,6 +2,6 @@
 # sulogin, to prompt the root password and invoke a shell
 
 type    = process
-command = /sbin/sulogin
+command = @DINIT_SULOGIN_PATH@
 restart = false
 options = runs-on-console

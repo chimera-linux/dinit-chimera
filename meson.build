@@ -26,6 +26,7 @@ bless_boot_path = get_option('bless-boot-path')
 dinit_console_path = get_option('dinit-console-path')
 dinit_cryptdisks_path = get_option('dinit-cryptdisks-path')
 dinit_devd_path = get_option('dinit-devd-path')
+dinit_sulogin_path = get_option('dinit-sulogin-path')
 dinit_path = pfx / sbindir / 'dinit'
 
 if bless_boot_path == ''
@@ -42,6 +43,10 @@ endif
 
 if dinit_devd_path == ''
     dinit_devd_path = pfx / lexecdir / 'dinit-devd'
+endif
+
+if dinit_sulogin_path == ''
+    dinit_sulogin_path = pfx / sbindir / 'sulogin'
 endif
 
 subdir('early/helpers')

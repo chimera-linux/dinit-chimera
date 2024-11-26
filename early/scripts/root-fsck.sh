@@ -31,7 +31,7 @@ if [ -r /proc/cmdline ]; then
 fi
 
 mntent() {
-    @@HELPER_PATH@@/mnt getent "$1" / "$2" 2>/dev/null
+    @HELPER_PATH@/mnt getent "$1" / "$2" 2>/dev/null
 }
 
 ROOTFSPASS=$(mntent /etc/fstab passno)
@@ -74,7 +74,7 @@ case $? in
         echo "WARNING: The root filesystem has unrecoverable errors."
         echo "         A recovery shell will now be started for you."
         echo "         The system will be rebooted when you are done."
-        sulogin
+        @DINIT_SULOGIN_PATH@
         reboot --use-passed-cfd -r
         ;;
     *) ;;

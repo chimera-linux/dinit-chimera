@@ -22,6 +22,12 @@ option('dinit-devd-path',
     description: 'path to dinit-devd (default: libexecdir/dinit-console)'
 )
 
+option('dinit-sulogin-path',
+    type: 'string',
+    value: '',
+    description: 'path to sulogin (default: sbindir/sulogin)'
+)
+
 option('default-path-env',
     type: 'string',
     value: '/sbin:/usr/sbin:/bin:/usr/bin',

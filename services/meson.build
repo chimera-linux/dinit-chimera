@@ -3,6 +3,7 @@ svconfd = configuration_data()
 svconfd.set('EARLY_PATH', pfx / srvdir / 'early')
 svconfd.set('HELPER_PATH', pfx / srvdir / 'early/helpers')
 svconfd.set('SCRIPT_PATH', pfx / srvdir / 'early/scripts')
+svconfd.set('DINIT_SULOGIN_PATH', dinit_sulogin_path)
 
 services = [
     'boot',
