@@ -42,7 +42,7 @@ KERNVER=$(uname -r)
 # try determining the kernel image path in a semi-generic way...
 if command -v linux-version > /dev/null 2>&1; then
     # we have linux-version? great, then it's nice and easy
-    KERNIMG=$(linux-version list --paths | grep "^$KERNVER" | awk '{print $2}')
+    KERNIMG=$(linux-version list --paths | grep "^$KERNVER" | cut -d ' ' -f2)
 else
     # scuffed but probably generic enough detection...
     for kern in /boot/vmlinu*${KERNVER} /boot/*Image*${KERNVER}; do

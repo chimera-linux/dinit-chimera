@@ -13,10 +13,10 @@ Currently the documentation for the suite is lacking, which is also to be done.
 ## Dependencies
 
 * [dinit](https://github.com/davmac314/dinit) (0.18.0 or newer)
+* POSIX shell
 * POSIX core utilities
   * We test [chimerautils](https://github.com/chimera-linux/chimerautils)
   * Others are supported (GNU, `busybox`, etc.); issues should be reported
-  * Needs at least coreutils equivalent, `awk`, and `sh`
 * `mount`, `umount`
   * Implementation must support `-a`
 * `sulogin` (any implementation, e.g. `shadow`, `util-linux`, `busybox`)
