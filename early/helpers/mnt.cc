@@ -296,7 +296,7 @@ static int do_mount_raw(
     unsigned long pmask = MS_SHARED | MS_PRIVATE | MS_SLAVE | MS_UNBINDABLE;
     /* propagation flags need to be set separately! */
     if (pflags & pmask) {
-        pflags &= pmask | (flags & MS_REC);
+        pflags &= pmask | MS_REC;
         flags &= ~(pmask | MS_REC);
     }
     if (helper) {
@@ -318,7 +318,7 @@ static int do_mount_raw(
         return ret;
     }
     /* propagation flags should change separately */
-    if (mount(src, tgt, fstype, pflags, nullptr) < 0) {
+    if ((pflags & pmask) && (mount(src, tgt, fstype, pflags, nullptr) < 0)) {
         warn("failed to change propagation flags of '%s'", tgt);
         return 1;
     }
