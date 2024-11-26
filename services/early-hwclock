@@ -5,4 +5,4 @@ command      = @SCRIPT_PATH@/clock.sh hwclock start
 stop-command = @SCRIPT_PATH@/clock.sh hwclock stop
 depends-on   = early-devd
 depends-on   = early-prepare.target
-depends-on   = early-root-rw.target
+waits-for    = early-root-rw.target

@@ -18,10 +18,7 @@ if [ ! -e /run/dinit/container ]; then
     echo "Unmounting filesystems..."
     ./early/scripts/fs-fstab.sh stop
     echo "Remounting root read-only..."
-    # util-linux 2.40 breaks e.g. overlayfs
-    # remount due to newer kernel interface
-    # https://github.com/util-linux/util-linux/issues/2576
-    LIBMOUNT_FORCE_MOUNT2=always mount -n -o remount,ro /
+    ./early/helpers/mnt rmnt / ro
 fi
 
 sync
