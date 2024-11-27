@@ -7,6 +7,7 @@ svconfd.set('DINIT_SULOGIN_PATH', dinit_sulogin_path)
 
 services = [
     'boot',
+    'block.device',
     'early-binfmt',
     'early-bless-boot',
     'early-cgroups',
@@ -50,6 +51,7 @@ services = [
     'early-devd',
     'local.target',
     'login.target',
+    'net.device',
     'network.target',
     'pre-local.target',
     'pre-network.target',
@@ -57,6 +59,7 @@ services = [
     'single',
     'system',
     'time-sync.target',
+    'tty.device',
 ]
 
 foreach srv: services

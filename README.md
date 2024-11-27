@@ -175,6 +175,34 @@ These only apply if the optional kdump service is installed.
   read-only remount of the root filesystem, e.g. for debugging. Note that this
   variable makes it into the global activation environment.
 
+## Device dependencies
+
+The `dinit-chimera` suite allows services to depend on devices. Currently,
+block devices, network devices, and tty devices are supported; more may be
+added later. For this functionality to work, it is necessary to build the
+suite with `libudev` support; while the helper programs will build even
+without it, they will not have any monitoring support.
+
+Example service that will not come up unless `/dev/sda1` is around, and will
+shut down if `/dev/sda1` disappears:
+
+```
+type = process
+command = /usr/bin/foo
+depends-on = local.target
+depends-on = block.device@/dev/sda1
+```
+
+This one will wait for a particular wireless interface but will not shut down
+if it happens to disappear:
+
+```
+type = process
+command = /usr/bin/foo
+depends-on = local.target
+depends-ms = net.device@wlp170s0
+```
+
 ## Service targets
 
 The collection provides special "target" services, suffixed with `.target`,

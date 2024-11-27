@@ -21,6 +21,7 @@ srvdir = get_option('libdir') / 'dinit.d'
 earlydir = srvdir / 'early'
 
 kmod_dep = dependency('libkmod')
+libudev_dep = dependency('libudev', required: get_option('libudev'))
 
 bless_boot_path = get_option('bless-boot-path')
 dinit_console_path = get_option('dinit-console-path')

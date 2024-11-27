@@ -2,4 +2,4 @@
 
 type       = internal
 depends-on = early-devd
-depends-ms = early-dev-settle
+depends-ms = early-devmon
