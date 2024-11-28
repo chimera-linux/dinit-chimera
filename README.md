@@ -178,10 +178,16 @@ These only apply if the optional kdump service is installed.
 ## Device dependencies
 
 The `dinit-chimera` suite allows services to depend on devices. Currently,
-block devices, network devices, and tty devices are supported; more may be
-added later. For this functionality to work, it is necessary to build the
-suite with `libudev` support; while the helper programs will build even
-without it, they will not have any monitoring support.
+the supported types are `block`, `iio`, `misc`, `net` and `tty`; they each
+correspond to `DEVTYPE.device` service. These take an argument, for most
+types it's the device node (managed symlink to it is also accepted, e.g.
+mapper links, `/dev/disk/...` and so on), except for network devices, which
+take either the network interface name, or the MAC address (which must be
+in all lowercase format).
+
+For this functionality to work, it is necessary to build the suite with
+`libudev` support; while the helper programs will build even without it,
+they will not have any monitoring support.
 
 Example service that will not come up unless `/dev/sda1` is around, and will
 shut down if `/dev/sda1` disappears:

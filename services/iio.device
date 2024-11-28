@@ -1,0 +1,6 @@
+# iio device prerequisite
+
+type = process
+command = @HELPER_PATH@/devclient iio $1 4
+depends-on = early-devmon
+ready-notification = pipefd:4

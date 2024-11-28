@@ -78,6 +78,8 @@ enum {
     DEVICE_BLOCK = 1,
     DEVICE_TTY,
     DEVICE_NET,
+    DEVICE_IIO,
+    DEVICE_MISC,
 };
 
 static bool sock_new(char const *path, int &sock, mode_t mode) {
@@ -161,6 +163,8 @@ static int ctl_sock = -1;
 /* type mappings */
 static std::unordered_set<std::string> map_block{};
 static std::unordered_set<std::string> map_tty{};
+static std::unordered_set<std::string> map_iio{};
+static std::unordered_set<std::string> map_misc{};
 static std::unordered_map<std::string, std::string> map_net{};
 static std::unordered_map<std::string_view, std::string_view> map_mac{};
 
@@ -270,6 +274,8 @@ int main(void) {
         (udev_enumerate_add_match_subsystem(en, "block") < 0) ||
         (udev_enumerate_add_match_subsystem(en, "net") < 0) ||
         (udev_enumerate_add_match_subsystem(en, "tty") < 0) ||
+        (udev_enumerate_add_match_subsystem(en, "iio") < 0) ||
+        (udev_enumerate_add_match_subsystem(en, "misc") < 0) ||
         (udev_enumerate_scan_devices(en) < 0)
     ) {
         std::fprintf(stderr, "could not add udev enumerate matches\n");
@@ -316,6 +322,18 @@ int main(void) {
                 std::printf("devmon: adding tty '%s'\n", dn);
                 map_tty.emplace(dn);
             }
+        } else if (!std::strcmp(ssys, "iio")) {
+            auto *dn = udev_device_get_devnode(dev);
+            if (dn) {
+                std::printf("devmon: adding iio '%s'\n", dn);
+                map_iio.emplace(dn);
+            }
+        } else if (!std::strcmp(ssys, "misc")) {
+            auto *dn = udev_device_get_devnode(dev);
+            if (dn) {
+                std::printf("devmon: adding misc '%s'\n", dn);
+                map_misc.emplace(dn);
+            }
         }
     }
     udev_enumerate_unref(en);
@@ -332,6 +350,8 @@ int main(void) {
         (udev_monitor_filter_add_match_subsystem_devtype(mon, "block", NULL) < 0) ||
         (udev_monitor_filter_add_match_subsystem_devtype(mon, "net", NULL) < 0) ||
         (udev_monitor_filter_add_match_subsystem_devtype(mon, "tty", NULL) < 0) ||
+        (udev_monitor_filter_add_match_subsystem_devtype(mon, "iio", NULL) < 0) ||
+        (udev_monitor_filter_add_match_subsystem_devtype(mon, "misc", NULL) < 0) ||
         (udev_monitor_enable_receiving(mon) < 0)
     ) {
         std::fprintf(stderr, "could not set up udev monitor filters\n");
@@ -484,6 +504,12 @@ int main(void) {
                 } else if (!std::strcmp(ssys, "tty")) {
                     set = &map_tty;
                     sysn = DEVICE_TTY;
+                } else if (!std::strcmp(ssys, "iio")) {
+                    set = &map_iio;
+                    sysn = DEVICE_IIO;
+                } else if (!std::strcmp(ssys, "misc")) {
+                    set = &map_misc;
+                    sysn = DEVICE_MISC;
                 }
                 /* devnode */
                 auto *devp = udev_device_get_devnode(dev);
@@ -580,6 +606,10 @@ int main(void) {
                         nc->devtype = DEVICE_BLOCK;
                     } else if (!std::strcmp(msgt, "tty")) {
                         nc->devtype = DEVICE_TTY;
+                    } else if (!std::strcmp(msgt, "iio")) {
+                        nc->devtype = DEVICE_IIO;
+                    } else if (!std::strcmp(msgt, "misc")) {
+                        nc->devtype = DEVICE_MISC;
                     } else if (!std::strcmp(msgt, "net")) {
                         nc->devtype = DEVICE_NET;
                     } else {
@@ -625,6 +655,12 @@ int main(void) {
                         break;
                     case DEVICE_TTY:
                         igot = check_devnode(nc->datastr, &map_tty) ? 1 : 0;
+                        break;
+                    case DEVICE_IIO:
+                        igot = check_devnode(nc->datastr, &map_iio) ? 1 : 0;
+                        break;
+                    case DEVICE_MISC:
+                        igot = check_devnode(nc->datastr, &map_misc) ? 1 : 0;
                         break;
                     case DEVICE_NET:
                         if (map_mac.find(nc->datastr) != map_mac.end()) {

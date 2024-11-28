@@ -62,7 +62,9 @@ int main(int argc, char **argv) {
     if (
         std::strcmp(type, "block") &&
         std::strcmp(type, "net") &&
-        std::strcmp(type, "tty")
+        std::strcmp(type, "tty") &&
+        std::strcmp(type, "iio") &&
+        std::strcmp(type, "misc")
     ) {
         errx(1, "invalid value for type");
     }
