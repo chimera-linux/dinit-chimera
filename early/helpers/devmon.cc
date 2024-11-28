@@ -52,6 +52,7 @@
 #include <cerrno>
 #include <cstdlib>
 #include <cstdio>
+#include <cstring>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
