@@ -1,6 +1,6 @@
-# tty device prerequisite
+# device prerequisite
 
 type = process
-command = @HELPER_PATH@/devclient tty $1 4
+command = @HELPER_PATH@/devclient $1 4
 depends-on = early-devmon
 ready-notification = pipefd:4

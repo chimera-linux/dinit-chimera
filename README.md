@@ -178,12 +178,12 @@ These only apply if the optional kdump service is installed.
 ## Device dependencies
 
 The `dinit-chimera` suite allows services to depend on devices. Currently,
-the supported types are `block`, `iio`, `misc`, `net` and `tty`; they each
-correspond to `DEVTYPE.device` service. These take an argument, for most
-types it's the device node (managed symlink to it is also accepted, e.g.
-mapper links, `/dev/disk/...` and so on), except for network devices, which
-take either the network interface name, or the MAC address (which must be
-in all lowercase format).
+it is possible to depend on individual devices (`/dev/foo`) from several
+subsystems (`block`, `iio`, `misc`, `tty`), on network interfaces, and on
+MAC addresses; this is set by the argument provided to the `device` service.
+For devices, it just looks like `/dev/foo`, for network interfaces it's
+`ifname:foo`, for MAC addresses it's `mac:foo` (the address must be in
+lowercase format).
 
 For this functionality to work, it is necessary to build the suite with
 `libudev` support; while the helper programs will build even without it,
@@ -196,7 +196,7 @@ shut down if `/dev/sda1` disappears:
 type = process
 command = /usr/bin/foo
 depends-on = local.target
-depends-on = block.device@/dev/sda1
+depends-on = device@/dev/sda1
 ```
 
 This one will wait for a particular wireless interface but will not shut down
@@ -206,7 +206,7 @@ if it happens to disappear:
 type = process
 command = /usr/bin/foo
 depends-on = local.target
-depends-ms = net.device@wlp170s0
+depends-ms = device@netif:wlp170s0
 ```
 
 ## Service targets

@@ -75,11 +75,9 @@
 #endif
 
 enum {
-    DEVICE_BLOCK = 1,
-    DEVICE_TTY,
-    DEVICE_NET,
-    DEVICE_IIO,
-    DEVICE_MISC,
+    DEVICE_DEV = 1,
+    DEVICE_NETIF,
+    DEVICE_MAC,
 };
 
 static bool sock_new(char const *path, int &sock, mode_t mode) {
@@ -161,19 +159,12 @@ static std::vector<conn> conns{};
 static int ctl_sock = -1;
 
 /* type mappings */
-static std::unordered_set<std::string> map_block{};
-static std::unordered_set<std::string> map_tty{};
-static std::unordered_set<std::string> map_iio{};
-static std::unordered_set<std::string> map_misc{};
-static std::unordered_map<std::string, std::string> map_net{};
+static std::unordered_set<std::string> map_dev{};
+static std::unordered_map<std::string, std::string> map_netif{};
 static std::unordered_map<std::string_view, std::string_view> map_mac{};
 
-static bool check_devnode(
-    std::string const &node,
-    std::unordered_set<std::string> const *set = nullptr,
-    char const *devn = nullptr
-) {
-    if (set && (set->find(node) != set->end())) {
+static bool check_devnode(std::string const &node, char const *devn = nullptr) {
+    if (!devn && (map_dev.find(node) != map_dev.end())) {
         return true;
     } else if (devn && (node == devn)) {
         return true;
@@ -193,8 +184,8 @@ static bool check_devnode(
     }
     /* check resolved in the set */
     bool ret;
-    if (set) {
-        ret = (set->find(respath) != set->end());
+    if (!devn) {
+        ret = (map_dev.find(respath) != map_dev.end());
     } else {
         ret = !std::strcmp(respath, devn);
     }
@@ -297,42 +288,29 @@ int main(void) {
             return 1;
         }
         auto *ssys = udev_device_get_subsystem(dev);
-        if (!std::strcmp(ssys, "block")) {
+        if (
+            !std::strcmp(ssys, "block") ||
+            !std::strcmp(ssys, "tty") ||
+            !std::strcmp(ssys, "iio") ||
+            !std::strcmp(ssys, "misc")
+        ) {
             auto *dn = udev_device_get_devnode(dev);
             if (dn) {
-                std::printf("devmon: adding block '%s'\n", dn);
-                map_block.emplace(dn);
+                std::printf("devmon: adding %s '%s'\n", ssys, dn);
+                map_dev.emplace(dn);
             }
         } else if (!std::strcmp(ssys, "net")) {
             auto *iface = udev_device_get_sysname(dev);
             if (iface) {
                 std::printf("devmon: adding netif '%s'\n", iface);
                 auto *maddr = udev_device_get_sysattr_value(dev, "address");
-                auto itp = map_net.emplace(iface, maddr ? maddr : "");
+                auto itp = map_netif.emplace(iface, maddr ? maddr : "");
                 if (maddr) {
                     std::printf(
                         "devmon: adding mac '%s' for netif '%s'\n", maddr, iface
                     );
                     map_mac.emplace(itp.first->second, itp.first->first);
                 }
-            }
-        } else if (!std::strcmp(ssys, "tty")) {
-            auto *dn = udev_device_get_devnode(dev);
-            if (dn) {
-                std::printf("devmon: adding tty '%s'\n", dn);
-                map_tty.emplace(dn);
-            }
-        } else if (!std::strcmp(ssys, "iio")) {
-            auto *dn = udev_device_get_devnode(dev);
-            if (dn) {
-                std::printf("devmon: adding iio '%s'\n", dn);
-                map_iio.emplace(dn);
-            }
-        } else if (!std::strcmp(ssys, "misc")) {
-            auto *dn = udev_device_get_devnode(dev);
-            if (dn) {
-                std::printf("devmon: adding misc '%s'\n", dn);
-                map_misc.emplace(dn);
             }
         }
     }
@@ -426,11 +404,9 @@ int main(void) {
             /* whether to drop it */
             bool rem = !std::strcmp(udev_device_get_action(dev), "remove");
             auto *ssys = udev_device_get_subsystem(dev);
-            int sysn = 0;
             std::printf("devmon: %s device\n", rem ? "drop" : "add");
             /* handle net specially as it does not have a device node */
             if (!std::strcmp(ssys, "net")) {
-                sysn = DEVICE_NET;
                 /* netif */
                 auto *ifname = udev_device_get_sysname(dev);
                 std::string oldmac;
@@ -438,11 +414,11 @@ int main(void) {
                 unsigned char igot;
                 if (rem) {
                     std::printf("devmon: drop netif '%s'\n", ifname);
-                    auto it = map_net.find(ifname);
-                    if (it != map_net.end()) {
+                    auto it = map_netif.find(ifname);
+                    if (it != map_netif.end()) {
                         oldmac = std::move(it->second);
                         map_mac.erase(oldmac);
-                        map_net.erase(it);
+                        map_netif.erase(it);
                         macaddr = !oldmac.empty() ? oldmac.c_str() : nullptr;
                     }
                     if (macaddr) {
@@ -461,12 +437,12 @@ int main(void) {
                             macaddr, ifname
                         );
                     }
-                    auto it = map_net.find(ifname);
-                    if (it != map_net.end()) {
+                    auto it = map_netif.find(ifname);
+                    if (it != map_netif.end()) {
                         map_mac.erase(it->second);
                         it->second = macaddr ? macaddr : "";
                     } else {
-                        it = map_net.emplace(ifname, macaddr ? macaddr : "").first;
+                        it = map_netif.emplace(ifname, macaddr ? macaddr : "").first;
                     }
                     if (macaddr) {
                         map_mac.emplace(it->second, it->first);
@@ -474,11 +450,13 @@ int main(void) {
                     igot = 1;
                 }
                 for (auto &cn: conns) {
-                    if (cn.devtype != sysn) {
+                    if ((cn.devtype != DEVICE_NETIF) && (cn.devtype != DEVICE_MAC)) {
                         continue;
                     }
-                    if (
-                        (cn.datastr != ifname) &&
+                    if ((cn.devtype == DEVICE_NETIF) && (cn.datastr != ifname)) {
+                        continue;
+                    } else if (
+                        (cn.devtype == DEVICE_MAC) &&
                         (!macaddr || (cn.datastr != macaddr))
                     ) {
                         continue;
@@ -497,39 +475,25 @@ int main(void) {
                     }
                 }
             } else {
-                std::unordered_set<std::string> *set = nullptr;
-                if (!std::strcmp(ssys, "block")) {
-                    set = &map_block;
-                    sysn = DEVICE_BLOCK;
-                } else if (!std::strcmp(ssys, "tty")) {
-                    set = &map_tty;
-                    sysn = DEVICE_TTY;
-                } else if (!std::strcmp(ssys, "iio")) {
-                    set = &map_iio;
-                    sysn = DEVICE_IIO;
-                } else if (!std::strcmp(ssys, "misc")) {
-                    set = &map_misc;
-                    sysn = DEVICE_MISC;
-                }
                 /* devnode */
                 auto *devp = udev_device_get_devnode(dev);
                 std::printf(
                     "devmon: %s %s '%s'\n", rem ? "drop" : "add", ssys, devp
                 );
-                if (devp && set) {
+                if (devp) {
                     unsigned char igot;
                     if (rem) {
-                        set->erase(devp);
+                        map_dev.erase(devp);
                         igot = 0;
                     } else {
-                        set->emplace(devp);
+                        map_dev.emplace(devp);
                         igot = 1;
                     }
                     for (auto &cn: conns) {
-                        if (cn.devtype != sysn) {
+                        if (cn.devtype != DEVICE_DEV) {
                             continue;
                         }
-                        if (!check_devnode(cn.datastr, nullptr, devp)) {
+                        if (!check_devnode(cn.datastr, devp)) {
                             continue;
                         }
                         if (write(cn.fd, &igot, sizeof(igot)) != sizeof(igot)) {
@@ -602,16 +566,12 @@ int main(void) {
                     }
                     /* ensure the requested type is valid */
                     auto *msgt = &nc->handshake[1];
-                    if (!std::strcmp(msgt, "block")) {
-                        nc->devtype = DEVICE_BLOCK;
-                    } else if (!std::strcmp(msgt, "tty")) {
-                        nc->devtype = DEVICE_TTY;
-                    } else if (!std::strcmp(msgt, "iio")) {
-                        nc->devtype = DEVICE_IIO;
-                    } else if (!std::strcmp(msgt, "misc")) {
-                        nc->devtype = DEVICE_MISC;
-                    } else if (!std::strcmp(msgt, "net")) {
-                        nc->devtype = DEVICE_NET;
+                    if (!std::strcmp(msgt, "dev")) {
+                        nc->devtype = DEVICE_DEV;
+                    } else if (!std::strcmp(msgt, "netif")) {
+                        nc->devtype = DEVICE_NETIF;
+                    } else if (!std::strcmp(msgt, "mac")) {
+                        nc->devtype = DEVICE_MAC;
                     } else {
                         warnx(
                             "devmon: invalid requested type '%s' for %d",
@@ -650,24 +610,14 @@ int main(void) {
                     nc->datastr.push_back(char(c));
                 }
                 switch (nc->devtype) {
-                    case DEVICE_BLOCK:
-                        igot = check_devnode(nc->datastr, &map_block) ? 1 : 0;
+                    case DEVICE_DEV:
+                        igot = check_devnode(nc->datastr) ? 1 : 0;
                         break;
-                    case DEVICE_TTY:
-                        igot = check_devnode(nc->datastr, &map_tty) ? 1 : 0;
+                    case DEVICE_NETIF:
+                        igot = (map_netif.find(nc->datastr) != map_netif.end()) ? 1 : 0;
                         break;
-                    case DEVICE_IIO:
-                        igot = check_devnode(nc->datastr, &map_iio) ? 1 : 0;
-                        break;
-                    case DEVICE_MISC:
-                        igot = check_devnode(nc->datastr, &map_misc) ? 1 : 0;
-                        break;
-                    case DEVICE_NET:
-                        if (map_mac.find(nc->datastr) != map_mac.end()) {
-                            igot = 1;
-                        } else {
-                            igot = (map_net.find(nc->datastr) != map_net.end()) ? 1 : 0;
-                        }
+                    case DEVICE_MAC:
+                        igot = (map_mac.find(nc->datastr) != map_mac.end()) ? 1 : 0;
                         break;
                     default:
                         /* should never happen */

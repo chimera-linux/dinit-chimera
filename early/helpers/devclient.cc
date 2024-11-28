@@ -47,26 +47,34 @@
 #endif
 
 int main(int argc, char **argv) {
-    if (argc != 4) {
-        errx(1, "usage: %s type devname fd", argv[0]);
+    if (argc != 3) {
+        errx(1, "usage: %s devname fd", argv[0]);
     }
 
-    int fdnum = atoi(argv[3]);
+    int fdnum = atoi(argv[2]);
     errno = 0;
     if (!fdnum || (fcntl(fdnum, F_GETFD) < 0)) {
         errx(1, "invalid file descriptor for readiness (%d)", fdnum);
     }
 
-    char const *type = argv[1];
-    char const *devn = argv[2];
-    if (
-        std::strcmp(type, "block") &&
-        std::strcmp(type, "net") &&
-        std::strcmp(type, "tty") &&
-        std::strcmp(type, "iio") &&
-        std::strcmp(type, "misc")
-    ) {
-        errx(1, "invalid value for type");
+    char *devn = argv[2];
+
+    bool isdev = !std::strncmp(devn, "/dev/", 5);
+    bool isnet = !std::strncmp(devn, "netif:", 3);
+    bool ismac = !std::strncmp(devn, "mac:", 4);
+
+    if (!isdev && !isnet && !ismac) {
+        errx(1, "invalid device value");
+    }
+
+    /* default for device nodes */
+    char const *type = "dev";
+    if (!isdev) {
+        /* terminate the devtype */
+        auto *col = std::strchr(devn, ':');
+        *col = '\0';
+        type = devn;
+        devn = col + 1;
     }
 
     unsigned short devlen = std::strlen(devn);
