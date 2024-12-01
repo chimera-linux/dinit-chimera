@@ -749,9 +749,11 @@ do_compact:
             }
         }
     }
+#ifdef HAVE_UDEV
     /* we don't manage udev fd */
     fds[2].fd = -1;
     fds[3].fd = -1;
+#endif
     for (auto &fd: fds) {
         if (fd.fd >= 0) {
             close(fd.fd);
