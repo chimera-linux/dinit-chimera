@@ -69,6 +69,14 @@
 
 #ifdef HAVE_UDEV
 #include <libudev.h>
+
+/* subsystems we always match even without a tag */
+static char const *notag_subsys[] = {
+    "block",
+    "net",
+    "tty",
+    nullptr
+};
 #endif
 
 #ifndef DEVMON_SOCKET
@@ -202,6 +210,183 @@ static void sig_handler(int sign) {
     write(sigpipe[1], &sign, sizeof(sign));
 }
 
+#ifdef HAVE_UDEV
+static bool initial_populate(struct udev_enumerate *en) {
+    if (udev_enumerate_scan_devices(en) < 0) {
+        std::fprintf(stderr, "could not scan enumerate\n");
+        return false;
+    }
+
+    struct udev_list_entry *en_devices = udev_enumerate_get_list_entry(en);
+    struct udev_list_entry *en_entry;
+
+    udev_list_entry_foreach(en_entry, en_devices) {
+        auto *path = udev_list_entry_get_name(en_entry);
+        struct udev_device *dev = udev_device_new_from_syspath(udev, path);
+        if (!dev) {
+            std::fprintf(stderr, "could not construct device from enumerate\n");
+            udev_enumerate_unref(en);
+            return false;
+        }
+        auto *ssys = udev_device_get_subsystem(dev);
+        if (std::strcmp(ssys, "net")) {
+            auto *dn = udev_device_get_devnode(dev);
+            if (dn) {
+                std::printf("devmon: adding %s '%s'\n", ssys, dn);
+                map_dev.emplace(dn);
+            }
+        } else {
+            auto *iface = udev_device_get_sysname(dev);
+            if (iface) {
+                std::printf("devmon: adding netif '%s'\n", iface);
+                auto *maddr = udev_device_get_sysattr_value(dev, "address");
+                auto itp = map_netif.emplace(iface, maddr ? maddr : "");
+                if (maddr) {
+                    std::printf(
+                        "devmon: adding mac '%s' for netif '%s'\n", maddr, iface
+                    );
+                    map_mac.emplace(itp.first->second, itp.first->first);
+                }
+            }
+        }
+    }
+    return true;
+}
+
+static bool resolve_device(struct udev_monitor *mon, bool tagged) {
+    auto *dev = udev_monitor_receive_device(mon);
+    if (!dev) {
+        warn("udev_monitor_receive_device failed");
+        return false;
+    }
+    auto *ssys = udev_device_get_subsystem(dev);
+    /* when checking tagged monitor ensure we don't handle devices we
+     * take care of unconditionally regardless of tag (another monitor)
+     */
+    for (auto **p = notag_subsys; *p; ++p) {
+        if (!tagged) {
+            break;
+        }
+        if (!std::strcmp(ssys, *p)) {
+            udev_device_unref(dev);
+            return true;
+        }
+    }
+    /* whether to drop it */
+    bool rem = !std::strcmp(udev_device_get_action(dev), "remove");
+    std::printf("devmon: %s device\n", rem ? "drop" : "add");
+    /* handle net specially as it does not have a device node */
+    if (!std::strcmp(ssys, "net")) {
+        /* netif */
+        auto *ifname = udev_device_get_sysname(dev);
+        std::string oldmac;
+        char const *macaddr = nullptr;
+        unsigned char igot;
+        if (rem) {
+            std::printf("devmon: drop netif '%s'\n", ifname);
+            auto it = map_netif.find(ifname);
+            if (it != map_netif.end()) {
+                oldmac = std::move(it->second);
+                map_mac.erase(oldmac);
+                map_netif.erase(it);
+                macaddr = !oldmac.empty() ? oldmac.c_str() : nullptr;
+            }
+            if (macaddr) {
+                std::printf(
+                    "devmon: drop mac '%s' for netif '%s'\n",
+                    macaddr, ifname
+                );
+            }
+            igot = 0;
+        } else {
+            std::printf("devmon: add netif '%s'\n", ifname);
+            macaddr = udev_device_get_sysattr_value(dev, "address");
+            if (macaddr) {
+                std::printf(
+                    "devmon: add mac '%s' for netif '%s'\n",
+                    macaddr, ifname
+                );
+            }
+            auto it = map_netif.find(ifname);
+            if (it != map_netif.end()) {
+                map_mac.erase(it->second);
+                it->second = macaddr ? macaddr : "";
+            } else {
+                it = map_netif.emplace(ifname, macaddr ? macaddr : "").first;
+            }
+            if (macaddr) {
+                map_mac.emplace(it->second, it->first);
+            }
+            igot = 1;
+        }
+        for (auto &cn: conns) {
+            if ((cn.devtype != DEVICE_NETIF) && (cn.devtype != DEVICE_MAC)) {
+                continue;
+            }
+            if ((cn.devtype == DEVICE_NETIF) && (cn.datastr != ifname)) {
+                continue;
+            } else if (
+                (cn.devtype == DEVICE_MAC) &&
+                (!macaddr || (cn.datastr != macaddr))
+            ) {
+                continue;
+            }
+            if (write(cn.fd, &igot, sizeof(igot)) != sizeof(igot)) {
+                warn("write failed for %d\n", cn.fd);
+                for (auto &fd: fds) {
+                    if (fd.fd == cn.fd) {
+                        fd.fd = -1;
+                        fd.revents = 0;
+                        break;
+                    }
+                }
+                close(cn.fd);
+                cn.fd = -1;
+            }
+        }
+    } else {
+        /* devnode */
+        auto *devp = udev_device_get_devnode(dev);
+        std::printf(
+            "devmon: %s %s '%s'\n", rem ? "drop" : "add", ssys, devp
+        );
+        if (devp) {
+            unsigned char igot;
+            if (rem) {
+                map_dev.erase(devp);
+                igot = 0;
+            } else {
+                map_dev.emplace(devp);
+                igot = 1;
+            }
+            for (auto &cn: conns) {
+                if (cn.devtype != DEVICE_DEV) {
+                    continue;
+                }
+                if (!check_devnode(cn.datastr, devp)) {
+                    continue;
+                }
+                if (write(cn.fd, &igot, sizeof(igot)) != sizeof(igot)) {
+                    warn("write failed for %d\n", cn.fd);
+                    for (auto &fd: fds) {
+                        if (fd.fd == cn.fd) {
+                            fd.fd = -1;
+                            fd.revents = 0;
+                            break;
+                        }
+                    }
+                    close(cn.fd);
+                    cn.fd = -1;
+                }
+            }
+        }
+    }
+    /* here: resolve device name and type and add it to mapping */
+    udev_device_unref(dev);
+    return true;
+}
+#endif
+
 int main(void) {
     /* simple signal handler for SIGTERM/SIGINT */
     {
@@ -245,8 +430,6 @@ int main(void) {
     fds.reserve(16);
     conns.reserve(16);
 
-    int dev_fd = -1;
-
 #ifdef HAVE_UDEV
     std::printf("devmon: udev init\n");
     udev = udev_new();
@@ -256,104 +439,114 @@ int main(void) {
     }
 
     /* prepopulate the mappings */
-    struct udev_enumerate *en = udev_enumerate_new(udev);
-    if (!en) {
+    struct udev_enumerate *en1 = udev_enumerate_new(udev);
+    struct udev_enumerate *en2 = udev_enumerate_new(udev);
+
+    if (!en1 || !en2) {
         std::fprintf(stderr, "could not create udev enumerate\n");
         udev_unref(udev);
         return 1;
     }
+
     if (
-        (udev_enumerate_add_match_subsystem(en, "block") < 0) ||
-        (udev_enumerate_add_match_subsystem(en, "net") < 0) ||
-        (udev_enumerate_add_match_subsystem(en, "tty") < 0) ||
-        (udev_enumerate_add_match_subsystem(en, "iio") < 0) ||
-        (udev_enumerate_add_match_subsystem(en, "misc") < 0) ||
-        (udev_enumerate_scan_devices(en) < 0)
+        (udev_enumerate_add_match_tag(en2, "systemd") < 0) ||
+        (udev_enumerate_add_match_tag(en2, "dinit") < 0)
     ) {
         std::fprintf(stderr, "could not add udev enumerate matches\n");
-        udev_enumerate_unref(en);
+        udev_enumerate_unref(en1);
+        udev_enumerate_unref(en2);
         udev_unref(udev);
         return 1;
     }
 
-    struct udev_list_entry *en_devices = udev_enumerate_get_list_entry(en);
-    struct udev_list_entry *en_entry;
-
-    udev_list_entry_foreach(en_entry, en_devices) {
-        auto *path = udev_list_entry_get_name(en_entry);
-        struct udev_device *dev = udev_device_new_from_syspath(udev, path);
-        if (!dev) {
-            std::fprintf(stderr, "could not construct device from enumerate\n");
-            udev_enumerate_unref(en);
+    for (auto **p = notag_subsys; *p; ++p) {
+        if (
+            (udev_enumerate_add_match_subsystem(en1, *p) < 0) ||
+            (udev_enumerate_add_nomatch_subsystem(en2, *p) < 0)
+        ) {
+            std::fprintf(stderr, "could not add enumerate match for '%s'\n", *p);
+            udev_enumerate_unref(en1);
+            udev_enumerate_unref(en2);
             udev_unref(udev);
             return 1;
         }
-        auto *ssys = udev_device_get_subsystem(dev);
-        if (
-            !std::strcmp(ssys, "block") ||
-            !std::strcmp(ssys, "tty") ||
-            !std::strcmp(ssys, "iio") ||
-            !std::strcmp(ssys, "misc")
-        ) {
-            auto *dn = udev_device_get_devnode(dev);
-            if (dn) {
-                std::printf("devmon: adding %s '%s'\n", ssys, dn);
-                map_dev.emplace(dn);
-            }
-        } else if (!std::strcmp(ssys, "net")) {
-            auto *iface = udev_device_get_sysname(dev);
-            if (iface) {
-                std::printf("devmon: adding netif '%s'\n", iface);
-                auto *maddr = udev_device_get_sysattr_value(dev, "address");
-                auto itp = map_netif.emplace(iface, maddr ? maddr : "");
-                if (maddr) {
-                    std::printf(
-                        "devmon: adding mac '%s' for netif '%s'\n", maddr, iface
-                    );
-                    map_mac.emplace(itp.first->second, itp.first->first);
-                }
-            }
-        }
     }
-    udev_enumerate_unref(en);
-    udev_unref(udev);
 
-    struct udev_monitor *mon = udev_monitor_new_from_netlink(udev, "udev");
-    if (!mon) {
+    if (!initial_populate(en1) || !initial_populate(en2)) {
+        udev_enumerate_unref(en1);
+        udev_enumerate_unref(en2);
+        udev_unref(udev);
+        return 1;
+    }
+
+    udev_enumerate_unref(en1);
+    udev_enumerate_unref(en2);
+
+    struct udev_monitor *mon1 = udev_monitor_new_from_netlink(udev, "udev");
+    if (!mon1) {
         std::fprintf(stderr, "could not create udev monitor\n");
         udev_unref(udev);
         return 1;
     }
 
-    if (
-        (udev_monitor_filter_add_match_subsystem_devtype(mon, "block", NULL) < 0) ||
-        (udev_monitor_filter_add_match_subsystem_devtype(mon, "net", NULL) < 0) ||
-        (udev_monitor_filter_add_match_subsystem_devtype(mon, "tty", NULL) < 0) ||
-        (udev_monitor_filter_add_match_subsystem_devtype(mon, "iio", NULL) < 0) ||
-        (udev_monitor_filter_add_match_subsystem_devtype(mon, "misc", NULL) < 0) ||
-        (udev_monitor_enable_receiving(mon) < 0)
-    ) {
-        std::fprintf(stderr, "could not set up udev monitor filters\n");
-        udev_monitor_unref(mon);
+    struct udev_monitor *mon2 = udev_monitor_new_from_netlink(udev, "udev");
+    if (!mon1) {
+        std::fprintf(stderr, "could not create udev monitor\n");
+        udev_monitor_unref(mon1);
         udev_unref(udev);
         return 1;
     }
 
-    dev_fd = udev_monitor_get_fd(mon);
-#endif
-
-    /* monitor fd */
-    {
-        auto &pfd = fds.emplace_back();
-        pfd.fd = dev_fd;
-        pfd.events = POLLIN;
-        pfd.revents = 0;
+    for (auto **p = notag_subsys; *p; ++p) {
+        if (udev_monitor_filter_add_match_subsystem_devtype(mon1, *p, NULL) < 0) {
+            std::fprintf(stderr, "could not set up monitor filter for '%s'\n", *p);
+            udev_monitor_unref(mon1);
+            udev_monitor_unref(mon2);
+            udev_unref(udev);
+            return 1;
+        }
     }
+
+    if (
+        (udev_monitor_filter_add_match_tag(mon2, "systemd") < 0) ||
+        (udev_monitor_filter_add_match_tag(mon2, "dinit") < 0)
+    ) {
+        std::fprintf(stderr, "could not set up udev monitor tag filters\n");
+        udev_monitor_unref(mon1);
+        udev_monitor_unref(mon2);
+        udev_unref(udev);
+        return 1;
+    }
+
+    if (
+        (udev_monitor_enable_receiving(mon1) < 0) ||
+        (udev_monitor_enable_receiving(mon2) < 0)
+    ) {
+        std::fprintf(stderr, "could not set enable udev monitor receiving\n");
+        udev_monitor_unref(mon1);
+        udev_monitor_unref(mon2);
+        udev_unref(udev);
+        return 1;
+    }
+
+    {
+        auto &pfd1 = fds.emplace_back();
+        pfd1.fd = udev_monitor_get_fd(mon1);
+        pfd1.events = POLLIN;
+        pfd1.revents = 0;
+
+        auto &pfd2 = fds.emplace_back();
+        pfd2.fd = udev_monitor_get_fd(mon2);
+        pfd2.events = POLLIN;
+        pfd2.revents = 0;
+    }
+#endif
 
     std::printf("devmon: main loop\n");
 
     int ret = 0;
     for (;;) {
+        std::size_t ni = 0;
         std::printf("devmon: poll\n");
         auto pret = poll(fds.data(), fds.size(), -1);
         if (pret < 0) {
@@ -367,9 +560,9 @@ int main(void) {
             goto do_compact;
         }
         /* signal fd */
-        if (fds[0].revents == POLLIN) {
+        if (fds[ni].revents == POLLIN) {
             int sign;
-            if (read(fds[0].fd, &sign, sizeof(sign)) != sizeof(sign)) {
+            if (read(fds[ni].fd, &sign, sizeof(sign)) != sizeof(sign)) {
                 warn("signal read failed");
                 goto do_compact;
             }
@@ -377,9 +570,9 @@ int main(void) {
             break;
         }
         /* check for incoming connections */
-        if (fds[1].revents) {
+        if (fds[++ni].revents) {
             for (;;) {
-                auto afd = accept4(fds[1].fd, nullptr, nullptr, SOCK_NONBLOCK);
+                auto afd = accept4(fds[ni].fd, nullptr, nullptr, SOCK_NONBLOCK);
                 if (afd < 0) {
                     if ((errno != EAGAIN) && (errno != EWOULDBLOCK)) {
                         warn("accept4 failed");
@@ -394,130 +587,18 @@ int main(void) {
             }
         }
         /* check on udev */
-        if (fds[2].revents) {
 #ifdef HAVE_UDEV
-            auto *dev = udev_monitor_receive_device(mon);
-            if (!dev) {
-                warn("udev_monitor_receive_device failed");
-                ret = 1;
-                break;
-            }
-            /* whether to drop it */
-            bool rem = !std::strcmp(udev_device_get_action(dev), "remove");
-            auto *ssys = udev_device_get_subsystem(dev);
-            std::printf("devmon: %s device\n", rem ? "drop" : "add");
-            /* handle net specially as it does not have a device node */
-            if (!std::strcmp(ssys, "net")) {
-                /* netif */
-                auto *ifname = udev_device_get_sysname(dev);
-                std::string oldmac;
-                char const *macaddr = nullptr;
-                unsigned char igot;
-                if (rem) {
-                    std::printf("devmon: drop netif '%s'\n", ifname);
-                    auto it = map_netif.find(ifname);
-                    if (it != map_netif.end()) {
-                        oldmac = std::move(it->second);
-                        map_mac.erase(oldmac);
-                        map_netif.erase(it);
-                        macaddr = !oldmac.empty() ? oldmac.c_str() : nullptr;
-                    }
-                    if (macaddr) {
-                        std::printf(
-                            "devmon: drop mac '%s' for netif '%s'\n",
-                            macaddr, ifname
-                        );
-                    }
-                    igot = 0;
-                } else {
-                    std::printf("devmon: add netif '%s'\n", ifname);
-                    macaddr = udev_device_get_sysattr_value(dev, "address");
-                    if (macaddr) {
-                        std::printf(
-                            "devmon: add mac '%s' for netif '%s'\n",
-                            macaddr, ifname
-                        );
-                    }
-                    auto it = map_netif.find(ifname);
-                    if (it != map_netif.end()) {
-                        map_mac.erase(it->second);
-                        it->second = macaddr ? macaddr : "";
-                    } else {
-                        it = map_netif.emplace(ifname, macaddr ? macaddr : "").first;
-                    }
-                    if (macaddr) {
-                        map_mac.emplace(it->second, it->first);
-                    }
-                    igot = 1;
-                }
-                for (auto &cn: conns) {
-                    if ((cn.devtype != DEVICE_NETIF) && (cn.devtype != DEVICE_MAC)) {
-                        continue;
-                    }
-                    if ((cn.devtype == DEVICE_NETIF) && (cn.datastr != ifname)) {
-                        continue;
-                    } else if (
-                        (cn.devtype == DEVICE_MAC) &&
-                        (!macaddr || (cn.datastr != macaddr))
-                    ) {
-                        continue;
-                    }
-                    if (write(cn.fd, &igot, sizeof(igot)) != sizeof(igot)) {
-                        warn("write failed for %d\n", cn.fd);
-                        for (auto &fd: fds) {
-                            if (fd.fd == cn.fd) {
-                                fd.fd = -1;
-                                fd.revents = 0;
-                                break;
-                            }
-                        }
-                        close(cn.fd);
-                        cn.fd = -1;
-                    }
-                }
-            } else {
-                /* devnode */
-                auto *devp = udev_device_get_devnode(dev);
-                std::printf(
-                    "devmon: %s %s '%s'\n", rem ? "drop" : "add", ssys, devp
-                );
-                if (devp) {
-                    unsigned char igot;
-                    if (rem) {
-                        map_dev.erase(devp);
-                        igot = 0;
-                    } else {
-                        map_dev.emplace(devp);
-                        igot = 1;
-                    }
-                    for (auto &cn: conns) {
-                        if (cn.devtype != DEVICE_DEV) {
-                            continue;
-                        }
-                        if (!check_devnode(cn.datastr, devp)) {
-                            continue;
-                        }
-                        if (write(cn.fd, &igot, sizeof(igot)) != sizeof(igot)) {
-                            warn("write failed for %d\n", cn.fd);
-                            for (auto &fd: fds) {
-                                if (fd.fd == cn.fd) {
-                                    fd.fd = -1;
-                                    fd.revents = 0;
-                                    break;
-                                }
-                            }
-                            close(cn.fd);
-                            cn.fd = -1;
-                        }
-                    }
-                }
-            }
-            /* here: resolve device name and type and add it to mapping */
-            udev_device_unref(dev);
-#endif
+        if (fds[++ni].revents && !resolve_device(mon1, false)) {
+            ret = 1;
+            break;
         }
+        if (fds[++ni].revents && !resolve_device(mon2, true)) {
+            ret = 1;
+            break;
+        }
+#endif
         /* handle connections */
-        for (std::size_t i = 3; i < fds.size(); ++i) {
+        for (std::size_t i = ni + 1; i < fds.size(); ++i) {
             conn *nc = nullptr;
             unsigned char igot;
             if (fds[i].revents == 0) {
@@ -670,6 +751,7 @@ do_compact:
     }
     /* we don't manage udev fd */
     fds[2].fd = -1;
+    fds[3].fd = -1;
     for (auto &fd: fds) {
         if (fd.fd >= 0) {
             close(fd.fd);
@@ -677,7 +759,8 @@ do_compact:
     }
 #ifdef HAVE_UDEV
     /* clean up udev resources if necessary */
-    udev_monitor_unref(mon);
+    udev_monitor_unref(mon1);
+    udev_monitor_unref(mon2);
     udev_unref(udev);
 #endif
     std::printf("devmon: exit with %d\n", ret);
