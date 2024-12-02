@@ -254,7 +254,7 @@ struct device {
     std::string mac{};
     std::string syspath{};
     std::string subsys{};
-    std::vector<std::string> waits_for{};
+    std::unordered_set<std::string> waits_for{};
 
     void init_dev(char const *node, bool write = true) {
         if (node) {
@@ -393,7 +393,7 @@ static void sig_handler(int sign) {
 }
 
 #ifdef HAVE_UDEV
-static void handle_device_dinit(struct udev_device *dev, char const *, bool rem) {
+static void handle_device_dinit(struct udev_device *dev, device &devm, bool rem) {
     /* only tagged devices may have DINIT_WAITS_FOR when added
      * for removals, do a lookup to drop a possible service
      */
@@ -404,9 +404,48 @@ static void handle_device_dinit(struct udev_device *dev, char const *, bool rem)
     ) {
         return;
     }
-#if 0
-    auto *svc = udev_device_get_property_value(dev, "DINIT_WAITS_FOR");
-#endif
+    char const *svcs = "";
+    /* when removing, always reduce to empty list */
+    if (!rem) {
+        auto *usvc = udev_device_get_property_value(dev, "DINIT_WAITS_FOR");
+        if (usvc) {
+            svcs = usvc;
+        }
+    }
+    /* skip any initial whitespace just in case */
+    while (std::isspace(*svcs)) {
+        ++svcs;
+    }
+    /* make up a new set */
+    std::unordered_set<std::string> nsvcset{};
+    for (;;) {
+        auto *sep = svcs;
+        while (*sep && !std::isspace(*sep)) {
+            ++sep;
+        }
+        auto sv = std::string_view{svcs, std::size_t(sep - svcs)};
+        if (sv.empty()) {
+            /* no more */
+            break;
+        }
+        nsvcset.emplace(sv);
+    }
+    /* go over old set, severing dependencies for anything no longer there */
+    for (auto &v: devm.waits_for) {
+        if (nsvcset.find(v) != nsvcset.end()) {
+            continue;
+        }
+        /* stop here */
+    }
+    /* go over new set, adding dependencies for anything newly added */
+    for (auto &v: nsvcset) {
+        if (devm.waits_for.find(v) != devm.waits_for.end()) {
+            continue;
+        }
+        /* start here */
+    }
+    /* and switch them */
+    devm.waits_for = std::move(nsvcset);
 }
 
 static bool initial_populate(struct udev_enumerate *en) {
@@ -428,7 +467,7 @@ static bool initial_populate(struct udev_enumerate *en) {
         }
         auto &devm = map_sys[path];
         devm.syspath = path;
-        handle_device_dinit(dev, path, false);
+        handle_device_dinit(dev, devm, false);
         devm.subsys = udev_device_get_subsystem(dev);
         if (devm.subsys != "net") {
             devm.init_dev(udev_device_get_devnode(dev), false);
@@ -449,6 +488,7 @@ static void add_device(
     auto odev = map_sys.find(sysp);
     if (odev != map_sys.end()) {
         /* preexisting entry */
+        handle_device_dinit(dev, odev->second, false);
         if (std::strcmp(ssys, "net")) {
             odev->second.set_dev(udev_device_get_devnode(dev));
         } else {
@@ -461,6 +501,7 @@ static void add_device(
     device devm;
     devm.syspath = sysp;
     devm.subsys = ssys;
+    handle_device_dinit(dev, devm, false);
     if (std::strcmp(ssys, "net")) {
         devm.init_dev(udev_device_get_devnode(dev));
     } else {
@@ -472,12 +513,13 @@ static void add_device(
     map_sys.emplace(devm.syspath, std::move(devm));
 }
 
-static void remove_device(char const *sysp) {
+static void remove_device(struct udev_device *dev, char const *sysp) {
     auto it = map_sys.find(sysp);
     if (it == map_sys.end()) {
         return;
     }
     auto &devm = it->second;
+    handle_device_dinit(dev, devm, true);
     devm.remove();
     auto sysn = std::move(devm.syspath);
     map_sys.erase(it);
@@ -510,10 +552,8 @@ static bool resolve_device(struct udev_monitor *mon, bool tagged) {
     /* whether to drop it */
     bool rem = !std::strcmp(udev_device_get_action(dev), "remove");
     std::printf("devmon: %s device '%s'\n", rem ? "drop" : "add", sysp);
-    /* try handling dinit services... */
-    handle_device_dinit(dev, sysp, rem);
     if (rem) {
-        remove_device(sysp);
+        remove_device(dev, sysp);
     } else {
         add_device(dev, sysp, ssys);
     }
