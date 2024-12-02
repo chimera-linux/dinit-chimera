@@ -85,7 +85,8 @@ static char const *notag_subsys[] = {
 #endif
 
 enum {
-    DEVICE_DEV = 1,
+    DEVICE_SYS = 1,
+    DEVICE_DEV,
     DEVICE_NETIF,
     DEVICE_MAC,
 };
@@ -218,7 +219,7 @@ static void write_conn(conn &cn, unsigned char igot) {
     }
 }
 
-static void write_net(int devt, unsigned char igot, std::string const &name) {
+static void write_gen(int devt, unsigned char igot, std::string const &name) {
     for (auto &cn: conns) {
         if ((cn.devtype != devt) || (cn.datastr != name)) {
             continue;
@@ -264,6 +265,9 @@ struct device {
         std::printf(
             "devmon: add %s '%s'\n", subsys.c_str(), name.c_str()
         );
+        if (write) {
+            write_gen(DEVICE_SYS, 1, syspath);
+        }
         if (node) {
             if (write) {
                 write_dev(1, name);
@@ -282,15 +286,18 @@ struct device {
         std::printf(
             "devmon: add netif '%s' ('%s')\n", name.c_str(), mac.c_str()
         );
+        if (write) {
+            write_gen(DEVICE_SYS, 1, syspath);
+        }
         if (ifname) {
             if (write) {
-                write_net(DEVICE_NETIF, 1, name);
+                write_gen(DEVICE_NETIF, 1, name);
             }
             map_netif.emplace(name, syspath);
         }
         if (macaddr) {
             if (write) {
-                write_net(DEVICE_MAC, 1, mac);
+                write_gen(DEVICE_MAC, 1, mac);
             }
             map_mac.emplace(mac, syspath);
         }
@@ -323,11 +330,11 @@ struct device {
             "devmon: ifname change '%s' -> '%s'\n",
             name.c_str(), ifname ? ifname : ""
         );
-        write_net(DEVICE_NETIF, 0, name);
+        write_gen(DEVICE_NETIF, 0, name);
         map_netif.erase(name);
         if (ifname) {
             name = ifname;
-            write_net(DEVICE_NETIF, 1, name);
+            write_gen(DEVICE_NETIF, 1, name);
             map_netif.emplace(name, syspath);
         } else {
             name.clear();
@@ -342,11 +349,11 @@ struct device {
             "devmon: mac change '%s' -> '%s'\n",
             mac.c_str(), nmac ? nmac : ""
         );
-        write_net(DEVICE_MAC, 0, mac);
+        write_gen(DEVICE_MAC, 0, mac);
         map_mac.erase(mac);
         if (nmac) {
             mac = nmac;
-            write_net(DEVICE_MAC, 1, mac);
+            write_gen(DEVICE_MAC, 1, mac);
             map_mac.emplace(name, syspath);
         } else {
             mac.clear();
@@ -360,11 +367,11 @@ struct device {
                 name.c_str(), mac.c_str()
             );
             if (!name.empty()) {
-                write_net(DEVICE_NETIF, 0, name);
+                write_gen(DEVICE_NETIF, 0, name);
                 map_netif.erase(name);
             }
             if (!mac.empty()) {
-                write_net(DEVICE_MAC, 0, mac);
+                write_gen(DEVICE_MAC, 0, mac);
                 map_mac.erase(name);
             }
         } else {
@@ -376,6 +383,7 @@ struct device {
                 map_dev.erase(name);
             }
         }
+        write_gen(DEVICE_SYS, 0, syspath);
     }
 };
 
@@ -826,6 +834,8 @@ int main(void) {
                     auto *msgt = &nc->handshake[1];
                     if (!std::strcmp(msgt, "dev")) {
                         nc->devtype = DEVICE_DEV;
+                    } else if (!std::strcmp(msgt, "sys")) {
+                        nc->devtype = DEVICE_SYS;
                     } else if (!std::strcmp(msgt, "netif")) {
                         nc->devtype = DEVICE_NETIF;
                     } else if (!std::strcmp(msgt, "mac")) {
@@ -870,6 +880,9 @@ int main(void) {
                 switch (nc->devtype) {
                     case DEVICE_DEV:
                         igot = check_devnode(nc->datastr) ? 1 : 0;
+                        break;
+                    case DEVICE_SYS:
+                        igot = (map_sys.find(nc->datastr) != map_sys.end()) ? 1 : 0;
                         break;
                     case DEVICE_NETIF:
                         igot = (map_netif.find(nc->datastr) != map_netif.end()) ? 1 : 0;

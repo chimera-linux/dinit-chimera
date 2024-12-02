@@ -178,13 +178,13 @@ These only apply if the optional kdump service is installed.
 ## Device dependencies
 
 The `dinit-chimera` suite allows services to depend on devices. Currently,
-it is possible to depend on individual devices (`/dev/foo`), on network
-interfaces, and on MAC addresses; this is set by the argument provided to
-the `device` service.
+it is possible to depend on individual devices (`/dev/foo`), on `/sys` paths,
+on network interfaces, and on MAC addresses; this is set by the argument
+provided to the `device` service.
 
-For devices, it just looks like `/dev/foo`, for network interfaces it's
-`ifname:foo`, for MAC addresses it's `mac:foo` (the address must be in
-lowercase format).
+For devices, it just looks like `/dev/foo`, for `/sys` paths it's a long native
+path like `/sys/devices/...`, for network interfaces it's `ifname:foo`, for MAC
+addresses it's `mac:foo` (the address must be in lowercase format).
 
 Devices from the `block`, `net`, and `tty` subsystems are matched automatically.
 If you wish to match devices from other subsystems, they have to carry

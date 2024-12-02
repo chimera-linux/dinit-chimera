@@ -60,16 +60,19 @@ int main(int argc, char **argv) {
     char *devn = argv[2];
 
     bool isdev = !std::strncmp(devn, "/dev/", 5);
+    bool issys = !std::strncmp(devn, "/sys/", 5);
     bool isnet = !std::strncmp(devn, "netif:", 3);
     bool ismac = !std::strncmp(devn, "mac:", 4);
 
-    if (!isdev && !isnet && !ismac) {
+    if (!isdev && !isnet && !ismac && !issys) {
         errx(1, "invalid device value");
     }
 
     /* default for device nodes */
     char const *type = "dev";
-    if (!isdev) {
+    if (issys) {
+        type = "sys";
+    } else if (!isdev) {
         /* terminate the devtype */
         auto *col = std::strchr(devn, ':');
         *col = '\0';
