@@ -446,27 +446,28 @@ static bool initial_populate(struct udev_enumerate *en) {
 static void add_device(
     struct udev_device *dev, char const *sysp, char const *ssys
 ) {
-    /* construct a new device structure with new values */
+    auto odev = map_sys.find(sysp);
+    if (odev != map_sys.end()) {
+        /* preexisting entry */
+        if (std::strcmp(ssys, "net")) {
+            odev->second.set_dev(udev_device_get_devnode(dev));
+        } else {
+            odev->second.set_ifname(udev_device_get_sysname(dev));
+            odev->second.set_mac(udev_device_get_sysattr_value(dev, "address"));
+        }
+        return;
+    }
+    /* new entry */
     device devm;
     devm.syspath = sysp;
     devm.subsys = ssys;
-    auto odev = map_sys.find(sysp);
-    if (!std::strcmp(ssys, "net")) {
-        auto *ifname = udev_device_get_sysname(dev);
-        auto *macaddr = udev_device_get_sysattr_value(dev, "address");
-        if (odev != map_sys.end()) {
-            odev->second.set_ifname(ifname);
-            odev->second.set_mac(macaddr);
-            return;
-        }
-        devm.init_net(ifname, macaddr);
+    if (std::strcmp(ssys, "net")) {
+        devm.init_dev(udev_device_get_devnode(dev));
     } else {
-        auto *node = udev_device_get_devnode(dev);
-        if (odev != map_sys.end()) {
-            odev->second.set_dev(node);
-            return;
-        }
-        devm.init_dev(node);
+        devm.init_net(
+            udev_device_get_sysname(dev),
+            udev_device_get_sysattr_value(dev, "address")
+        );
     }
     map_sys.emplace(devm.syspath, std::move(devm));
 }
