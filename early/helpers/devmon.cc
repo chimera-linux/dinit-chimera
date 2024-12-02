@@ -168,8 +168,8 @@ static std::vector<conn> conns{};
 static int ctl_sock = -1;
 
 /* type mappings */
-static std::unordered_set<std::string> map_dev{};
-static std::unordered_map<std::string, std::string> map_netif{};
+static std::unordered_map<std::string_view, std::string_view> map_dev{};
+static std::unordered_map<std::string_view, std::string_view> map_netif{};
 static std::unordered_map<std::string_view, std::string_view> map_mac{};
 
 static bool check_devnode(std::string const &node, char const *devn = nullptr) {
@@ -202,6 +202,188 @@ static bool check_devnode(std::string const &node, char const *devn = nullptr) {
     return ret;
 }
 
+static void write_conn(conn &cn, unsigned char igot) {
+    if (write(cn.fd, &igot, sizeof(igot)) != sizeof(igot)) {
+        warn("write failed for %d\n", cn.fd);
+        for (auto &fd: fds) {
+            if (fd.fd == cn.fd) {
+                fd.fd = -1;
+                fd.revents = 0;
+                break;
+            }
+        }
+        close(cn.fd);
+        cn.fd = -1;
+    }
+}
+
+static void write_net(int devt, unsigned char igot, std::string const &name) {
+    for (auto &cn: conns) {
+        if ((cn.devtype != devt) || (cn.datastr != name)) {
+            continue;
+        }
+        write_conn(cn, igot);
+    }
+}
+
+static void write_dev(unsigned char igot, std::string const &name) {
+    for (auto &cn: conns) {
+        if (cn.devtype != DEVICE_DEV) {
+            continue;
+        }
+        if (!check_devnode(cn.datastr, name.c_str())) {
+            continue;
+        }
+        if (write(cn.fd, &igot, sizeof(igot)) != sizeof(igot)) {
+            warn("write failed for %d\n", cn.fd);
+            for (auto &fd: fds) {
+                if (fd.fd == cn.fd) {
+                    fd.fd = -1;
+                    fd.revents = 0;
+                    break;
+                }
+            }
+            close(cn.fd);
+            cn.fd = -1;
+        }
+    }
+}
+
+struct device {
+    std::string name{}; /* devpath or ifname */
+    std::string mac{};
+    std::string syspath{};
+    std::string subsys{};
+    std::vector<std::string> waits_for{};
+
+    void init_dev(char const *node, bool write = true) {
+        if (node) {
+            name = node;
+        }
+        std::printf(
+            "devmon: add %s '%s'\n", subsys.c_str(), name.c_str()
+        );
+        if (node) {
+            if (write) {
+                write_dev(1, name);
+            }
+            map_dev.emplace(name, syspath);
+        }
+    }
+
+    void init_net(char const *ifname, char const *macaddr, bool write = true) {
+        if (ifname) {
+            name = ifname;
+        }
+        if (macaddr) {
+            mac = macaddr;
+        }
+        std::printf(
+            "devmon: add netif '%s' ('%s')\n", name.c_str(), mac.c_str()
+        );
+        if (ifname) {
+            if (write) {
+                write_net(DEVICE_NETIF, 1, name);
+            }
+            map_netif.emplace(name, syspath);
+        }
+        if (macaddr) {
+            if (write) {
+                write_net(DEVICE_MAC, 1, mac);
+            }
+            map_mac.emplace(mac, syspath);
+        }
+    }
+
+    void set_dev(char const *devnode) {
+        if ((devnode && (name == devnode)) || (!devnode && name.empty())) {
+            return;
+        }
+        std::printf(
+            "devmon: device change '%s' -> '%s'\n",
+            name.c_str(), devnode ? devnode : ""
+        );
+        write_dev(0, name);
+        map_dev.erase(name);
+        if (devnode) {
+            name = devnode;
+            write_dev(1, name);
+            map_dev.emplace(name, syspath);
+        } else {
+            name.clear();
+        }
+    }
+
+    void set_ifname(char const *ifname) {
+        if ((ifname && (name == ifname)) || (!ifname && name.empty())) {
+            return;
+        }
+        std::printf(
+            "devmon: ifname change '%s' -> '%s'\n",
+            name.c_str(), ifname ? ifname : ""
+        );
+        write_net(DEVICE_NETIF, 0, name);
+        map_netif.erase(name);
+        if (ifname) {
+            name = ifname;
+            write_net(DEVICE_NETIF, 1, name);
+            map_netif.emplace(name, syspath);
+        } else {
+            name.clear();
+        }
+    }
+
+    void set_mac(char const *nmac) {
+        if ((nmac && (mac == nmac)) || (!nmac && mac.empty())) {
+            return;
+        }
+        std::printf(
+            "devmon: mac change '%s' -> '%s'\n",
+            mac.c_str(), nmac ? nmac : ""
+        );
+        write_net(DEVICE_MAC, 0, mac);
+        map_mac.erase(mac);
+        if (nmac) {
+            mac = nmac;
+            write_net(DEVICE_MAC, 1, mac);
+            map_mac.emplace(name, syspath);
+        } else {
+            mac.clear();
+        }
+    }
+
+    void remove() {
+        if (subsys == "net") {
+            std::printf(
+                "devmon: drop netif '%s' (mac: '%s')\n",
+                name.c_str(), mac.c_str()
+            );
+            if (!name.empty()) {
+                write_net(DEVICE_NETIF, 0, name);
+                map_netif.erase(name);
+            }
+            if (!mac.empty()) {
+                write_net(DEVICE_MAC, 0, mac);
+                map_mac.erase(name);
+            }
+        } else {
+            std::printf(
+                "devmon: drop %s '%s'\n", subsys.c_str(), name.c_str()
+            );
+            if (!name.empty()) {
+                write_dev(0, name);
+                map_dev.erase(name);
+            }
+        }
+    }
+};
+
+/* canonical mapping of syspath to devices, also holds the memory */
+static std::unordered_map<std::string, device> map_sys;
+
+/* service set */
+static std::unordered_set<std::string> svc_set{};
+
 #ifdef HAVE_UDEV
 static struct udev *udev;
 #endif
@@ -211,6 +393,22 @@ static void sig_handler(int sign) {
 }
 
 #ifdef HAVE_UDEV
+static void handle_device_dinit(struct udev_device *dev, char const *, bool rem) {
+    /* only tagged devices may have DINIT_WAITS_FOR when added
+     * for removals, do a lookup to drop a possible service
+     */
+    if (
+        !rem &&
+        !udev_device_has_tag(dev, "dinit") &&
+        !udev_device_has_tag(dev, "systemd")
+    ) {
+        return;
+    }
+#if 0
+    auto *svc = udev_device_get_property_value(dev, "DINIT_WAITS_FOR");
+#endif
+}
+
 static bool initial_populate(struct udev_enumerate *en) {
     if (udev_enumerate_scan_devices(en) < 0) {
         std::fprintf(stderr, "could not scan enumerate\n");
@@ -228,29 +426,60 @@ static bool initial_populate(struct udev_enumerate *en) {
             udev_enumerate_unref(en);
             return false;
         }
-        auto *ssys = udev_device_get_subsystem(dev);
-        if (std::strcmp(ssys, "net")) {
-            auto *dn = udev_device_get_devnode(dev);
-            if (dn) {
-                std::printf("devmon: adding %s '%s'\n", ssys, dn);
-                map_dev.emplace(dn);
-            }
+        auto &devm = map_sys[path];
+        devm.syspath = path;
+        handle_device_dinit(dev, path, false);
+        devm.subsys = udev_device_get_subsystem(dev);
+        if (devm.subsys != "net") {
+            devm.init_dev(udev_device_get_devnode(dev), false);
         } else {
-            auto *iface = udev_device_get_sysname(dev);
-            if (iface) {
-                std::printf("devmon: adding netif '%s'\n", iface);
-                auto *maddr = udev_device_get_sysattr_value(dev, "address");
-                auto itp = map_netif.emplace(iface, maddr ? maddr : "");
-                if (maddr) {
-                    std::printf(
-                        "devmon: adding mac '%s' for netif '%s'\n", maddr, iface
-                    );
-                    map_mac.emplace(itp.first->second, itp.first->first);
-                }
-            }
+            devm.init_net(
+                udev_device_get_sysname(dev),
+                udev_device_get_sysattr_value(dev, "address"),
+                false
+            );
         }
     }
     return true;
+}
+
+static void add_device(
+    struct udev_device *dev, char const *sysp, char const *ssys
+) {
+    /* construct a new device structure with new values */
+    device devm;
+    devm.syspath = sysp;
+    devm.subsys = ssys;
+    auto odev = map_sys.find(sysp);
+    if (!std::strcmp(ssys, "net")) {
+        auto *ifname = udev_device_get_sysname(dev);
+        auto *macaddr = udev_device_get_sysattr_value(dev, "address");
+        if (odev != map_sys.end()) {
+            odev->second.set_ifname(ifname);
+            odev->second.set_mac(macaddr);
+            return;
+        }
+        devm.init_net(ifname, macaddr);
+    } else {
+        auto *node = udev_device_get_devnode(dev);
+        if (odev != map_sys.end()) {
+            odev->second.set_dev(node);
+            return;
+        }
+        devm.init_dev(node);
+    }
+    map_sys.emplace(devm.syspath, std::move(devm));
+}
+
+static void remove_device(char const *sysp) {
+    auto it = map_sys.find(sysp);
+    if (it == map_sys.end()) {
+        return;
+    }
+    auto &devm = it->second;
+    devm.remove();
+    auto sysn = std::move(devm.syspath);
+    map_sys.erase(it);
 }
 
 static bool resolve_device(struct udev_monitor *mon, bool tagged) {
@@ -259,7 +488,12 @@ static bool resolve_device(struct udev_monitor *mon, bool tagged) {
         warn("udev_monitor_receive_device failed");
         return false;
     }
+    auto *sysp = udev_device_get_syspath(dev);
     auto *ssys = udev_device_get_subsystem(dev);
+    if (!sysp || !ssys) {
+        warn("could not get syspath or subsystem for device");
+        return false;
+    }
     /* when checking tagged monitor ensure we don't handle devices we
      * take care of unconditionally regardless of tag (another monitor)
      */
@@ -274,114 +508,14 @@ static bool resolve_device(struct udev_monitor *mon, bool tagged) {
     }
     /* whether to drop it */
     bool rem = !std::strcmp(udev_device_get_action(dev), "remove");
-    std::printf("devmon: %s device\n", rem ? "drop" : "add");
-    /* handle net specially as it does not have a device node */
-    if (!std::strcmp(ssys, "net")) {
-        /* netif */
-        auto *ifname = udev_device_get_sysname(dev);
-        std::string oldmac;
-        char const *macaddr = nullptr;
-        unsigned char igot;
-        if (rem) {
-            std::printf("devmon: drop netif '%s'\n", ifname);
-            auto it = map_netif.find(ifname);
-            if (it != map_netif.end()) {
-                oldmac = std::move(it->second);
-                map_mac.erase(oldmac);
-                map_netif.erase(it);
-                macaddr = !oldmac.empty() ? oldmac.c_str() : nullptr;
-            }
-            if (macaddr) {
-                std::printf(
-                    "devmon: drop mac '%s' for netif '%s'\n",
-                    macaddr, ifname
-                );
-            }
-            igot = 0;
-        } else {
-            std::printf("devmon: add netif '%s'\n", ifname);
-            macaddr = udev_device_get_sysattr_value(dev, "address");
-            if (macaddr) {
-                std::printf(
-                    "devmon: add mac '%s' for netif '%s'\n",
-                    macaddr, ifname
-                );
-            }
-            auto it = map_netif.find(ifname);
-            if (it != map_netif.end()) {
-                map_mac.erase(it->second);
-                it->second = macaddr ? macaddr : "";
-            } else {
-                it = map_netif.emplace(ifname, macaddr ? macaddr : "").first;
-            }
-            if (macaddr) {
-                map_mac.emplace(it->second, it->first);
-            }
-            igot = 1;
-        }
-        for (auto &cn: conns) {
-            if ((cn.devtype != DEVICE_NETIF) && (cn.devtype != DEVICE_MAC)) {
-                continue;
-            }
-            if ((cn.devtype == DEVICE_NETIF) && (cn.datastr != ifname)) {
-                continue;
-            } else if (
-                (cn.devtype == DEVICE_MAC) &&
-                (!macaddr || (cn.datastr != macaddr))
-            ) {
-                continue;
-            }
-            if (write(cn.fd, &igot, sizeof(igot)) != sizeof(igot)) {
-                warn("write failed for %d\n", cn.fd);
-                for (auto &fd: fds) {
-                    if (fd.fd == cn.fd) {
-                        fd.fd = -1;
-                        fd.revents = 0;
-                        break;
-                    }
-                }
-                close(cn.fd);
-                cn.fd = -1;
-            }
-        }
+    std::printf("devmon: %s device '%s'\n", rem ? "drop" : "add", sysp);
+    /* try handling dinit services... */
+    handle_device_dinit(dev, sysp, rem);
+    if (rem) {
+        remove_device(sysp);
     } else {
-        /* devnode */
-        auto *devp = udev_device_get_devnode(dev);
-        std::printf(
-            "devmon: %s %s '%s'\n", rem ? "drop" : "add", ssys, devp
-        );
-        if (devp) {
-            unsigned char igot;
-            if (rem) {
-                map_dev.erase(devp);
-                igot = 0;
-            } else {
-                map_dev.emplace(devp);
-                igot = 1;
-            }
-            for (auto &cn: conns) {
-                if (cn.devtype != DEVICE_DEV) {
-                    continue;
-                }
-                if (!check_devnode(cn.datastr, devp)) {
-                    continue;
-                }
-                if (write(cn.fd, &igot, sizeof(igot)) != sizeof(igot)) {
-                    warn("write failed for %d\n", cn.fd);
-                    for (auto &fd: fds) {
-                        if (fd.fd == cn.fd) {
-                            fd.fd = -1;
-                            fd.revents = 0;
-                            break;
-                        }
-                    }
-                    close(cn.fd);
-                    cn.fd = -1;
-                }
-            }
-        }
+        add_device(dev, sysp, ssys);
     }
-    /* here: resolve device name and type and add it to mapping */
     udev_device_unref(dev);
     return true;
 }
