@@ -49,6 +49,7 @@
 #endif
 
 #include <cassert>
+#include <cctype>
 #include <cerrno>
 #include <cstdlib>
 #include <cstdio>
