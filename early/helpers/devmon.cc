@@ -69,6 +69,7 @@
 #include <sys/un.h>
 
 #ifdef HAVE_UDEV
+#include <libdinitctl.h>
 #include <libudev.h>
 
 /* subsystems we always match even without a tag */

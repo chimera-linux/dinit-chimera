@@ -1,6 +1,6 @@
-if libudev_dep.found() and not get_option('libudev').disabled()
+if libudev_dep.found() and dinitctl_dep.found() and not get_option('libudev').disabled()
     udev_cargs = ['-DHAVE_UDEV']
-    udev_deps = [libudev_dep]
+    udev_deps = [dinitctl_dep, libudev_dep]
 else
     udev_cargs = []
     udev_deps = []
