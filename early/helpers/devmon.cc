@@ -616,6 +616,25 @@ int main(void) {
     conns.reserve(16);
 
 #ifdef HAVE_UDEV
+    dinitctl *ctl;
+
+    /* set up dinit control connection */
+    auto *denv = std::getenv("DINIT_CS_FD");
+    if (denv) {
+        auto dfd = atoi(denv);
+        if (!dfd || (fcntl(dfd, F_GETFD) < 0)) {
+            std::fprintf(stderr, "dinit control fd is not a file descriptor\n");
+            return 1;
+        }
+        ctl = dinitctl_open_fd(dfd);
+    } else {
+        ctl = dinitctl_open_system();
+    }
+    if (!ctl) {
+        warn("failed to set up dinitctl");
+        return 1;
+    }
+
     std::printf("devmon: udev init\n");
     udev = udev_new();
     if (!udev) {
@@ -724,6 +743,11 @@ int main(void) {
         pfd2.fd = udev_monitor_get_fd(mon2);
         pfd2.events = POLLIN;
         pfd2.revents = 0;
+
+        auto &pfd3 = fds.emplace_back();
+        pfd3.fd = dinitctl_get_fd(ctl);
+        pfd3.events = POLLIN | POLLHUP;
+        pfd3.revents = 0;
     }
 #endif
 
@@ -780,6 +804,21 @@ int main(void) {
         if (fds[++ni].revents && !resolve_device(mon2, true)) {
             ret = 1;
             break;
+        }
+        if (fds[++ni].revents) {
+            for (;;) {
+                auto nev = dinitctl_dispatch(ctl, 0, nullptr);
+                if (nev < 0) {
+                    if (errno == EINTR) {
+                        continue;
+                    }
+                    warn("dinitctl_dispatch failed");
+                    ret = 1;
+                    goto do_compact;
+                } else if (!nev) {
+                    break;
+                }
+            }
         }
 #endif
         /* handle connections */
@@ -951,6 +990,7 @@ do_compact:
     udev_monitor_unref(mon1);
     udev_monitor_unref(mon2);
     udev_unref(udev);
+    dinitctl_close(ctl);
 #endif
     std::printf("devmon: exit with %d\n", ret);
     /* intended return code */
