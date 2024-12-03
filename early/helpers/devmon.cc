@@ -396,6 +396,8 @@ static std::unordered_set<std::string> svc_set{};
 
 #ifdef HAVE_UDEV
 static struct udev *udev;
+static dinitctl *dctl;
+static dinitctl_service_handle *dinit_system;
 #endif
 
 static void sig_handler(int sign) {
@@ -403,7 +405,7 @@ static void sig_handler(int sign) {
 }
 
 #ifdef HAVE_UDEV
-static void handle_device_dinit(struct udev_device *dev, device &devm, bool rem) {
+static bool handle_device_dinit(struct udev_device *dev, device &devm, bool rem) {
     /* only tagged devices may have DINIT_WAITS_FOR when added
      * for removals, do a lookup to drop a possible service
      */
@@ -412,7 +414,7 @@ static void handle_device_dinit(struct udev_device *dev, device &devm, bool rem)
         !udev_device_has_tag(dev, "dinit") &&
         !udev_device_has_tag(dev, "systemd")
     ) {
-        return;
+        return true;
     }
     char const *svcs = "";
     /* when removing, always reduce to empty list */
@@ -440,22 +442,68 @@ static void handle_device_dinit(struct udev_device *dev, device &devm, bool rem)
         }
         nsvcset.emplace(sv);
     }
+    /* unified callback for start and stop, they are almost the same */
+    auto start_stop_cb = [](dinitctl *ctl, void *data) {
+        dinitctl_service_handle *sh;
+        bool start = reinterpret_cast<std::uintptr_t>(data);
+        auto ret = dinitctl_load_service_finish(ctl, &sh, nullptr, nullptr);
+        if (ret < 0) {
+            dinitctl_abort(ctl, errno);
+            return;
+        } else if (ret > 0) {
+            /* can't find service etc */
+            return;
+        }
+        auto rem_finish_cb = [](dinitctl *ictl, void *idata) {
+            auto *ish = static_cast<dinitctl_service_handle *>(idata);
+            /* release the handle */
+            auto close_handle_cb = [](dinitctl *iictl, void *) {
+                dinitctl_close_service_handle_finish(iictl);
+            };
+            if (dinitctl_close_service_handle_async(
+                ictl, ish, close_handle_cb, nullptr) < 0
+            ) {
+                dinitctl_abort(ictl, errno);
+                return;
+            }
+        };
+        /* we have both handles now... */
+        if (dinitctl_add_remove_service_dependency_async(
+            ctl, dinit_system, sh, DINITCTL_DEPENDENCY_WAITS_FOR,
+            !start, start, rem_finish_cb, sh
+        ) < 0) {
+            dinitctl_abort(ctl, errno);
+        }
+    };
     /* go over old set, severing dependencies for anything no longer there */
     for (auto &v: devm.waits_for) {
         if (nsvcset.find(v) != nsvcset.end()) {
             continue;
         }
-        /* stop here */
+        if (dinitctl_load_service_async(
+            dctl, v.c_str(), true, start_stop_cb,
+            reinterpret_cast<void *>(std::uintptr_t(0))
+        ) < 0) {
+            warn("could not issue load_service");
+            return false;
+        }
     }
     /* go over new set, adding dependencies for anything newly added */
     for (auto &v: nsvcset) {
         if (devm.waits_for.find(v) != devm.waits_for.end()) {
             continue;
         }
-        /* start here */
+        if (dinitctl_load_service_async(
+            dctl, v.c_str(), false, start_stop_cb,
+            reinterpret_cast<void *>(std::uintptr_t(1))
+        ) < 0) {
+            warn("could not issue load_service");
+            return false;
+        }
     }
     /* and switch them */
     devm.waits_for = std::move(nsvcset);
+    return true;
 }
 
 static bool initial_populate(struct udev_enumerate *en) {
@@ -477,7 +525,10 @@ static bool initial_populate(struct udev_enumerate *en) {
         }
         auto &devm = map_sys[path];
         devm.syspath = path;
-        handle_device_dinit(dev, devm, false);
+        if (!handle_device_dinit(dev, devm, false)) {
+            udev_enumerate_unref(en);
+            return false;
+        }
         devm.subsys = udev_device_get_subsystem(dev);
         if (devm.subsys != "net") {
             devm.init_dev(udev_device_get_devnode(dev), false);
@@ -492,26 +543,30 @@ static bool initial_populate(struct udev_enumerate *en) {
     return true;
 }
 
-static void add_device(
+static bool add_device(
     struct udev_device *dev, char const *sysp, char const *ssys
 ) {
     auto odev = map_sys.find(sysp);
     if (odev != map_sys.end()) {
         /* preexisting entry */
-        handle_device_dinit(dev, odev->second, false);
+        if (!handle_device_dinit(dev, odev->second, false)) {
+            return false;
+        }
         if (std::strcmp(ssys, "net")) {
             odev->second.set_dev(udev_device_get_devnode(dev));
         } else {
             odev->second.set_ifname(udev_device_get_sysname(dev));
             odev->second.set_mac(udev_device_get_sysattr_value(dev, "address"));
         }
-        return;
+        return true;
     }
     /* new entry */
     device devm;
     devm.syspath = sysp;
     devm.subsys = ssys;
-    handle_device_dinit(dev, devm, false);
+    if (!handle_device_dinit(dev, devm, false)) {
+        return false;
+    }
     if (std::strcmp(ssys, "net")) {
         devm.init_dev(udev_device_get_devnode(dev));
     } else {
@@ -521,18 +576,22 @@ static void add_device(
         );
     }
     map_sys.emplace(devm.syspath, std::move(devm));
+    return true;
 }
 
-static void remove_device(struct udev_device *dev, char const *sysp) {
+static bool remove_device(struct udev_device *dev, char const *sysp) {
     auto it = map_sys.find(sysp);
     if (it == map_sys.end()) {
-        return;
+        return true;
     }
     auto &devm = it->second;
-    handle_device_dinit(dev, devm, true);
+    if (!handle_device_dinit(dev, devm, true)) {
+        return false;
+    }
     devm.remove();
     auto sysn = std::move(devm.syspath);
     map_sys.erase(it);
+    return true;
 }
 
 static bool resolve_device(struct udev_monitor *mon, bool tagged) {
@@ -562,13 +621,14 @@ static bool resolve_device(struct udev_monitor *mon, bool tagged) {
     /* whether to drop it */
     bool rem = !std::strcmp(udev_device_get_action(dev), "remove");
     std::printf("devmon: %s device '%s'\n", rem ? "drop" : "add", sysp);
+    bool ret;
     if (rem) {
-        remove_device(dev, sysp);
+        ret = remove_device(dev, sysp);
     } else {
-        add_device(dev, sysp, ssys);
+        ret = add_device(dev, sysp, ssys);
     }
     udev_device_unref(dev);
-    return true;
+    return ret;
 }
 #endif
 
@@ -616,8 +676,7 @@ int main(void) {
     conns.reserve(16);
 
 #ifdef HAVE_UDEV
-    dinitctl *ctl;
-
+    std::printf("devmon: init dinit\n");
     /* set up dinit control connection */
     auto *denv = std::getenv("DINIT_CS_FD");
     if (denv) {
@@ -626,12 +685,25 @@ int main(void) {
             std::fprintf(stderr, "dinit control fd is not a file descriptor\n");
             return 1;
         }
-        ctl = dinitctl_open_fd(dfd);
+        dctl = dinitctl_open_fd(dfd);
     } else {
-        ctl = dinitctl_open_system();
+        dctl = dinitctl_open_system();
     }
-    if (!ctl) {
+    if (!dctl) {
         warn("failed to set up dinitctl");
+        return 1;
+    }
+
+    char const *sserv = std::getenv("DINIT_SYSTEM_SERVICE");
+    if (!sserv || !*sserv) {
+        sserv = "system";
+    }
+    std::printf("devmon: locate service '%s'\n", sserv);
+    /* get a permanent handle to the service we'll depend on */
+    if (dinitctl_load_service(
+        dctl, sserv, true, &dinit_system, nullptr, nullptr
+    ) != 0) {
+        std::fprintf(stderr, "could not get a handle to the dinit system service");
         return 1;
     }
 
@@ -745,7 +817,7 @@ int main(void) {
         pfd2.revents = 0;
 
         auto &pfd3 = fds.emplace_back();
-        pfd3.fd = dinitctl_get_fd(ctl);
+        pfd3.fd = dinitctl_get_fd(dctl);
         pfd3.events = POLLIN | POLLHUP;
         pfd3.revents = 0;
     }
@@ -807,7 +879,7 @@ int main(void) {
         }
         if (fds[++ni].revents) {
             for (;;) {
-                auto nev = dinitctl_dispatch(ctl, 0, nullptr);
+                auto nev = dinitctl_dispatch(dctl, 0, nullptr);
                 if (nev < 0) {
                     if (errno == EINTR) {
                         continue;
@@ -990,7 +1062,7 @@ do_compact:
     udev_monitor_unref(mon1);
     udev_monitor_unref(mon2);
     udev_unref(udev);
-    dinitctl_close(ctl);
+    dinitctl_close(dctl);
 #endif
     std::printf("devmon: exit with %d\n", ret);
     /* intended return code */
