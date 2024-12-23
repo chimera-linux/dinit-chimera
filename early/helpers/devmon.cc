@@ -175,10 +175,19 @@ static std::unordered_map<std::string_view, std::string_view> map_dev{};
 static std::unordered_map<std::string_view, std::string_view> map_netif{};
 static std::unordered_map<std::string_view, std::string_view> map_mac{};
 
-static bool check_devnode(std::string const &node, char const *devn = nullptr) {
-    if (!devn && (map_dev.find(node) != map_dev.end())) {
-        return true;
-    } else if (devn && (node == devn)) {
+static bool check_devnode(
+    std::string const &node, char const *devn = nullptr,
+    std::string_view *syspath = nullptr
+) {
+    if (!devn) {
+        auto it = map_dev.find(node);
+        if (it != map_dev.end()) {
+            if (syspath) {
+                *syspath = it->second;
+            }
+            return true;
+        }
+    } else if (node == devn) {
         return true;
     }
     /* otherwise check if we're dealing with a link */
@@ -195,9 +204,15 @@ static bool check_devnode(std::string const &node, char const *devn = nullptr) {
         return false;
     }
     /* check resolved in the set */
-    bool ret;
+    bool ret = false;
     if (!devn) {
-        ret = (map_dev.find(respath) != map_dev.end());
+        auto it = map_dev.find(respath);
+        if (it != map_dev.end()) {
+            if (syspath) {
+                *syspath = it->second;
+            }
+            ret = true;
+        }
     } else {
         ret = !std::strcmp(respath, devn);
     }
@@ -257,27 +272,38 @@ struct device {
     std::string mac{};
     std::string syspath{};
     std::string subsys{};
-    std::unordered_set<std::string> waits_for{};
+    /* services that are currently dependencies and being dropped */
+    std::unordered_set<std::string> dsvcset;
+    /* services that are in process of becoming dependencies */
+    std::unordered_set<std::string> psvcset;
+    /* services that are pending and will become psvcset after that is cleared */
+    std::unordered_set<std::string> nsvcset;
+    dinitctl_service_handle *device_svc = nullptr;
+    std::size_t pending_svcs = 0;
+    /* device is most recently removed, regardless of event */
+    bool removed = false;
+    /* currently processing an event */
+    bool processing = false;
+    /* currently being-processed event is a removal */
+    bool removal = false;
+    /* there is an upcoming event pending */
+    bool pending = false;
+    /* device has or had a dinit/systemd tag at one point */
+    bool has_tag = false;
 
-    void init_dev(char const *node, bool write = true) {
+    void init_dev(char const *node) {
         if (node) {
             name = node;
         }
         std::printf(
             "devmon: add %s '%s'\n", subsys.c_str(), name.c_str()
         );
-        if (write) {
-            write_gen(DEVICE_SYS, 1, syspath);
-        }
         if (node) {
-            if (write) {
-                write_dev(1, name);
-            }
             map_dev.emplace(name, syspath);
         }
     }
 
-    void init_net(char const *ifname, char const *macaddr, bool write = true) {
+    void init_net(char const *ifname, char const *macaddr) {
         if (ifname) {
             name = ifname;
         }
@@ -287,19 +313,10 @@ struct device {
         std::printf(
             "devmon: add netif '%s' ('%s')\n", name.c_str(), mac.c_str()
         );
-        if (write) {
-            write_gen(DEVICE_SYS, 1, syspath);
-        }
         if (ifname) {
-            if (write) {
-                write_gen(DEVICE_NETIF, 1, name);
-            }
             map_netif.emplace(name, syspath);
         }
         if (macaddr) {
-            if (write) {
-                write_gen(DEVICE_MAC, 1, mac);
-            }
             map_mac.emplace(mac, syspath);
         }
     }
@@ -316,7 +333,6 @@ struct device {
         map_dev.erase(name);
         if (devnode) {
             name = devnode;
-            write_dev(1, name);
             map_dev.emplace(name, syspath);
         } else {
             name.clear();
@@ -335,7 +351,6 @@ struct device {
         map_netif.erase(name);
         if (ifname) {
             name = ifname;
-            write_gen(DEVICE_NETIF, 1, name);
             map_netif.emplace(name, syspath);
         } else {
             name.clear();
@@ -354,12 +369,54 @@ struct device {
         map_mac.erase(mac);
         if (nmac) {
             mac = nmac;
-            write_gen(DEVICE_MAC, 1, mac);
             map_mac.emplace(name, syspath);
         } else {
             mac.clear();
         }
     }
+
+    void ready(unsigned char status) {
+        std::printf("devmon: ready %d for '%s'\n", int(status), syspath.c_str());
+        write_gen(DEVICE_SYS, status, syspath);
+        if (subsys == "net") {
+            if (!name.empty()) {
+                write_gen(DEVICE_NETIF, status, name);
+            }
+            if (!mac.empty()) {
+                write_gen(DEVICE_MAC, status, mac);
+            }
+        } else {
+            if (!name.empty()) {
+                write_dev(status, name);
+            }
+        }
+    }
+
+#ifdef HAVE_UDEV
+    void init(struct udev_device *dev) {
+        if (subsys != "net") {
+            init_dev(udev_device_get_devnode(dev));
+        } else {
+            init_net(
+                udev_device_get_sysname(dev),
+                udev_device_get_sysattr_value(dev, "address")
+            );
+        }
+        removed = false;
+    }
+
+    void set(struct udev_device *dev) {
+        if (subsys != "net") {
+            set_dev(udev_device_get_devnode(dev));
+        } else {
+            set_ifname(udev_device_get_sysname(dev));
+            set_mac(udev_device_get_sysattr_value(dev, "address"));
+        }
+        removed = false;
+    }
+
+    bool process(dinitctl *ctl);
+#endif
 
     void remove() {
         if (subsys == "net") {
@@ -368,28 +425,28 @@ struct device {
                 name.c_str(), mac.c_str()
             );
             if (!name.empty()) {
-                write_gen(DEVICE_NETIF, 0, name);
                 map_netif.erase(name);
+                name.clear();
             }
             if (!mac.empty()) {
-                write_gen(DEVICE_MAC, 0, mac);
                 map_mac.erase(name);
+                mac.clear();
             }
         } else {
             std::printf(
                 "devmon: drop %s '%s'\n", subsys.c_str(), name.c_str()
             );
             if (!name.empty()) {
-                write_dev(0, name);
                 map_dev.erase(name);
+                name.clear();
             }
         }
-        write_gen(DEVICE_SYS, 0, syspath);
     }
 };
 
 /* canonical mapping of syspath to devices, also holds the memory */
 static std::unordered_map<std::string, device> map_sys;
+static std::unordered_map<dinitctl_service_handle *, device *> map_svcdev;
 
 /* service set */
 static std::unordered_set<std::string> svc_set{};
@@ -405,20 +462,229 @@ static void sig_handler(int sign) {
 }
 
 #ifdef HAVE_UDEV
-static bool handle_device_dinit(struct udev_device *dev, device &devm, bool rem) {
-    /* only tagged devices may have DINIT_WAITS_FOR when added
-     * for removals, do a lookup to drop a possible service
-     */
-    if (
-        !rem &&
-        !udev_device_has_tag(dev, "dinit") &&
-        !udev_device_has_tag(dev, "systemd")
-    ) {
+static void handle_dinit_event(
+    dinitctl *ctl, dinitctl_service_handle *handle,
+    enum dinitctl_service_event, dinitctl_service_status const *, void *
+) {
+    auto it = map_svcdev.find(handle);
+    if (it == map_svcdev.end()) {
+        return;
+    }
+    device *dev = it->second;
+    /* we don't care about the new status actually, just that it became it */
+    if (!--dev->pending_svcs && !dev->process(ctl)) {
+        dinitctl_abort(ctl, errno);
+    }
+    /* erase afterwards */
+    map_svcdev.erase(it);
+    /* and close the handle for this */
+    auto close_cb = [](dinitctl *ictl, void *) {
+        dinitctl_close_service_handle_finish(ictl);
+    };
+    if (dinitctl_close_service_handle_async(
+        ctl, handle, close_cb, nullptr
+    ) < 0) {
+        dinitctl_abort(ctl, errno);
+    }
+}
+
+/* service from a set has been loaded */
+static void dinit_subsvc_load_cb_base(dinitctl *ctl, void *data, bool removal) {
+    auto *dev = static_cast<device *>(data);
+    dinitctl_service_handle *ish;
+    dinitctl_service_state st;
+    auto ret = dinitctl_load_service_finish(
+        ctl, &ish, &st, nullptr
+    );
+    bool no_wake = false;
+    auto *dev_handle = dev->device_svc;
+    dev->device_svc = nullptr;
+    if (ret < 0) {
+        dinitctl_abort(ctl, errno);
+        return;
+    } else if (ret > 0) {
+        /* could not load, don't worry about it anymore */
+        if (!--dev->pending_svcs && !dev->process(ctl)) {
+            dinitctl_abort(ctl, errno);
+        }
+        return;
+    } else if (removal || st == DINITCTL_SERVICE_STATE_STARTED) {
+        /* already started so we don't expect a service event, process here
+         * that said, we still want to add the softdep, so don't return here!
+         */
+        no_wake = true;
+    } else {
+        /* keep track of it for the event */
+        map_svcdev.emplace(ish, dev);
+    }
+    /* a "regular" callback that performs a wake */
+    auto dep_cb = [](dinitctl *ictl, void *idata) {
+        dinitctl_add_remove_service_dependency_finish(ictl);
+        auto *iish = static_cast<dinitctl_service_handle *>(idata);
+        auto wake_cb = [](dinitctl *jctl, void *) {
+            dinitctl_wake_service_finish(jctl, nullptr);
+        };
+        /* give the service a wake once the dependency is either added or not,
+         * just to ensure it gets started if the dependency already existed
+         * or whatever... we want our event callback
+         */
+        if (dinitctl_wake_service_async(
+            ictl, iish, false, false, wake_cb, nullptr
+        ) < 0) {
+            dinitctl_abort(ictl, errno);
+        }
+        /* we don't close the handle here because we expect an event callback */
+    };
+    /* one without a wake because the service was already started */
+    auto dep_nowake_cb = [](dinitctl *ictl, void *idata) {
+        dinitctl_add_remove_service_dependency_finish(ictl);
+        auto *iish = static_cast<dinitctl_service_handle *>(idata);
+        auto close_cb = [](dinitctl *jctl, void *) {
+            dinitctl_close_service_handle_finish(jctl);
+        };
+        /* we close the handle here because no callback is expected */
+        if (dinitctl_close_service_handle_async(
+            ictl, iish, close_cb, nullptr
+        ) < 0) {
+            dinitctl_abort(ictl, errno);
+        }
+    };
+    /* we don't care about if it already exists or whatever... */
+    if (dinitctl_add_remove_service_dependency_async(
+        ctl, dev_handle, ish, DINITCTL_DEPENDENCY_WAITS_FOR,
+        removal, !removal, no_wake ? dep_nowake_cb : dep_cb, ish
+    ) < 0) {
+        dinitctl_abort(ctl, errno);
+        return;
+    }
+    /* at the end if we don't do a wake, process and close */
+    if (no_wake && !--dev->pending_svcs && !dev->process(ctl)) {
+        dinitctl_abort(ctl, errno);
+    }
+}
+
+/* version for services being dropped */
+static void dinit_subsvc_load_del_cb(dinitctl *ctl, void *data) {
+    dinit_subsvc_load_cb_base(ctl, data, true);
+}
+
+/* version for services being added */
+static void dinit_subsvc_load_add_cb(dinitctl *ctl, void *data) {
+    dinit_subsvc_load_cb_base(ctl, data, false);
+}
+
+/* dependency system => device@/sys/... was added/removed =>
+ * if this was a removal, do nothing else, otherwise loop all the
+ * services in the set and load each to prepare them to be added
+ */
+static void dinit_devsvc_add_cb(dinitctl *ctl, void *data) {
+    auto *dev = static_cast<device *>(data);
+    dinitctl_add_remove_service_dependency_finish(ctl);
+    dev->pending_svcs = 0;
+    /* now remove old deps if any */
+    for (auto it = dev->dsvcset.begin(); it != dev->dsvcset.end(); ++it) {
+        if (dinitctl_load_service_async(
+            ctl, it->c_str(), true, dinit_subsvc_load_del_cb, dev
+        ) < 0) {
+            dinitctl_abort(ctl, errno);
+            return;
+        }
+        ++dev->pending_svcs;
+    }
+    /* and add new ones */
+    for (auto it = dev->psvcset.begin(); it != dev->psvcset.end(); ++it) {
+        if (dinitctl_load_service_async(
+            ctl, it->c_str(), false, dinit_subsvc_load_add_cb, dev
+        ) < 0) {
+            dinitctl_abort(ctl, errno);
+            return;
+        }
+        ++dev->pending_svcs;
+    }
+}
+
+/* device@/sys/... has been loaded =>
+ * add the dependency from system to this service, enabling it,
+ * alternatively remove the dependency causing all to stop
+ */
+static void dinit_devsvc_load_cb(dinitctl *ctl, void *data) {
+    auto *dev = static_cast<device *>(data);
+    dinitctl_service_handle *sh;
+    auto ret = dinitctl_load_service_finish(ctl, &sh, nullptr, nullptr);
+    dev->device_svc = sh;
+    if (ret < 0) {
+        dinitctl_abort(ctl, errno);
+        return;
+    } else if (ret > 0) {
+        if (!dev->process(ctl)) {
+            dinitctl_abort(ctl, errno);
+        }
+        return;
+    }
+    if (dinitctl_add_remove_service_dependency_async(
+        ctl, dinit_system, sh, DINITCTL_DEPENDENCY_WAITS_FOR,
+        dev->removal, !dev->removal, dinit_devsvc_add_cb, dev
+    ) < 0) {
+        dinitctl_abort(ctl, errno);
+    }
+}
+
+bool device::process(dinitctl *ctl) {
+    /* signal the prior readiness and close the handle if we have it */
+    auto close_cb = [](dinitctl *ictl, void *) {
+        dinitctl_close_service_handle_finish(ictl);
+    };
+    /* close the device handle... */
+    if (device_svc && (dinitctl_close_service_handle_async(
+        ctl, device_svc, close_cb, nullptr
+    ) < 0)) {
+        warn("could not close device service handle");
+        processing = pending = false;
+        return false;
+    }
+    /* signal the readiness to clients */
+    ready(removal ? 0 : 1);
+    /* shuffle the sets; previous current set becomes removal set */
+    dsvcset = std::move(psvcset);
+    /* and pending set becomes to-be-added set */
+    psvcset = std::move(nsvcset);
+    /* just so we can call this from anywhere */
+    if (!pending) {
+        processing = false;
+        return true;
+    }
+    std::string dsvc = "device@";
+    dsvc += syspath;
+    pending = false;
+    removal = removed;
+    if (dinitctl_load_service_async(
+        ctl, dsvc.c_str(), removed, dinit_devsvc_load_cb, this
+    ) < 0) {
+        warn("could not issue load_service");
+        processing = false;
+        return false;
+    }
+    processing = true;
+    return true;
+}
+
+static bool handle_device_dinit(struct udev_device *dev, device &devm) {
+    /* if not formerly tagged, check if it's tagged now */
+    if (!devm.has_tag) {
+        devm.has_tag = (
+            udev_device_has_tag(dev, "dinit") ||
+            udev_device_has_tag(dev, "systemd")
+        );
+    }
+    /* if never tagged, take the fast path */
+    if (!devm.has_tag) {
+        /* we can skip the service waits */
+        devm.ready(devm.removed ? 0 : 1);
         return true;
     }
     char const *svcs = "";
-    /* when removing, always reduce to empty list */
-    if (!rem) {
+    /* when removing, don't read the var, we don't care anyway */
+    if (!devm.removed) {
         auto *usvc = udev_device_get_property_value(dev, "DINIT_WAITS_FOR");
         if (usvc) {
             svcs = usvc;
@@ -428,8 +694,8 @@ static bool handle_device_dinit(struct udev_device *dev, device &devm, bool rem)
     while (std::isspace(*svcs)) {
         ++svcs;
     }
-    /* make up a new set */
-    std::unordered_set<std::string> nsvcset{};
+    /* add stuff to the set */
+    devm.nsvcset.clear();
     for (;;) {
         auto *sep = svcs;
         while (*sep && !std::isspace(*sep)) {
@@ -440,69 +706,19 @@ static bool handle_device_dinit(struct udev_device *dev, device &devm, bool rem)
             /* no more */
             break;
         }
-        nsvcset.emplace(sv);
+        devm.nsvcset.emplace(sv);
     }
-    /* unified callback for start and stop, they are almost the same */
-    auto start_stop_cb = [](dinitctl *ctl, void *data) {
-        dinitctl_service_handle *sh;
-        bool start = reinterpret_cast<std::uintptr_t>(data);
-        auto ret = dinitctl_load_service_finish(ctl, &sh, nullptr, nullptr);
-        if (ret < 0) {
-            dinitctl_abort(ctl, errno);
-            return;
-        } else if (ret > 0) {
-            /* can't find service etc */
-            return;
-        }
-        auto rem_finish_cb = [](dinitctl *ictl, void *idata) {
-            auto *ish = static_cast<dinitctl_service_handle *>(idata);
-            /* release the handle */
-            auto close_handle_cb = [](dinitctl *iictl, void *) {
-                dinitctl_close_service_handle_finish(iictl);
-            };
-            if (dinitctl_close_service_handle_async(
-                ictl, ish, close_handle_cb, nullptr) < 0
-            ) {
-                dinitctl_abort(ictl, errno);
-                return;
-            }
-        };
-        /* we have both handles now... */
-        if (dinitctl_add_remove_service_dependency_async(
-            ctl, dinit_system, sh, DINITCTL_DEPENDENCY_WAITS_FOR,
-            !start, start, rem_finish_cb, sh
-        ) < 0) {
-            dinitctl_abort(ctl, errno);
-        }
-    };
-    /* go over old set, severing dependencies for anything no longer there */
-    for (auto &v: devm.waits_for) {
-        if (nsvcset.find(v) != nsvcset.end()) {
-            continue;
-        }
-        if (dinitctl_load_service_async(
-            dctl, v.c_str(), true, start_stop_cb,
-            reinterpret_cast<void *>(std::uintptr_t(0))
-        ) < 0) {
-            warn("could not issue load_service");
-            return false;
-        }
+    /* we are not keeping a queue, so if multiple add/del events comes in while
+     * we are still processing a previous one, only the latest will be processed
+     * but that is probably fine, a harmless edge case
+     */
+    devm.pending = true;
+    /* if not processing anything else at the moment, trigger it now,
+     * otherwise it will be triggered by the previous operation at its end
+     */
+    if (!devm.processing && !devm.process(dctl)) {
+        return false;
     }
-    /* go over new set, adding dependencies for anything newly added */
-    for (auto &v: nsvcset) {
-        if (devm.waits_for.find(v) != devm.waits_for.end()) {
-            continue;
-        }
-        if (dinitctl_load_service_async(
-            dctl, v.c_str(), false, start_stop_cb,
-            reinterpret_cast<void *>(std::uintptr_t(1))
-        ) < 0) {
-            warn("could not issue load_service");
-            return false;
-        }
-    }
-    /* and switch them */
-    devm.waits_for = std::move(nsvcset);
     return true;
 }
 
@@ -525,19 +741,11 @@ static bool initial_populate(struct udev_enumerate *en) {
         }
         auto &devm = map_sys[path];
         devm.syspath = path;
-        if (!handle_device_dinit(dev, devm, false)) {
+        devm.subsys = udev_device_get_subsystem(dev);
+        devm.init(dev);
+        if (!handle_device_dinit(dev, devm)) {
             udev_enumerate_unref(en);
             return false;
-        }
-        devm.subsys = udev_device_get_subsystem(dev);
-        if (devm.subsys != "net") {
-            devm.init_dev(udev_device_get_devnode(dev), false);
-        } else {
-            devm.init_net(
-                udev_device_get_sysname(dev),
-                udev_device_get_sysattr_value(dev, "address"),
-                false
-            );
         }
     }
     return true;
@@ -547,50 +755,36 @@ static bool add_device(
     struct udev_device *dev, char const *sysp, char const *ssys
 ) {
     auto odev = map_sys.find(sysp);
-    if (odev != map_sys.end()) {
+    if ((odev != map_sys.end()) && !odev->second.removed) {
         /* preexisting entry */
-        if (!handle_device_dinit(dev, odev->second, false)) {
+        odev->second.set(dev);
+        if (!handle_device_dinit(dev, odev->second)) {
             return false;
-        }
-        if (std::strcmp(ssys, "net")) {
-            odev->second.set_dev(udev_device_get_devnode(dev));
-        } else {
-            odev->second.set_ifname(udev_device_get_sysname(dev));
-            odev->second.set_mac(udev_device_get_sysattr_value(dev, "address"));
         }
         return true;
     }
     /* new entry */
-    device devm;
+    auto &devm = map_sys[sysp];
     devm.syspath = sysp;
     devm.subsys = ssys;
-    if (!handle_device_dinit(dev, devm, false)) {
+    devm.init(dev);
+    if (!handle_device_dinit(dev, devm)) {
         return false;
     }
-    if (std::strcmp(ssys, "net")) {
-        devm.init_dev(udev_device_get_devnode(dev));
-    } else {
-        devm.init_net(
-            udev_device_get_sysname(dev),
-            udev_device_get_sysattr_value(dev, "address")
-        );
-    }
-    map_sys.emplace(devm.syspath, std::move(devm));
     return true;
 }
 
 static bool remove_device(struct udev_device *dev, char const *sysp) {
     auto it = map_sys.find(sysp);
-    if (it == map_sys.end()) {
+    if ((it == map_sys.end()) || it->second.removed) {
         return true;
     }
     auto &devm = it->second;
-    if (!handle_device_dinit(dev, devm, true)) {
+    devm.removed = true;
+    if (!handle_device_dinit(dev, devm)) {
         return false;
     }
     devm.remove();
-    auto sysn = std::move(devm.syspath);
-    map_sys.erase(it);
     return true;
 }
 
@@ -704,6 +898,13 @@ int main(void) {
         dctl, sserv, true, &dinit_system, nullptr, nullptr
     ) != 0) {
         std::fprintf(stderr, "could not get a handle to the dinit system service");
+        return 1;
+    }
+
+    if (dinitctl_set_service_event_callback(
+        dctl, handle_dinit_event, nullptr
+    ) < 0) {
+        warn("failed to set up dinitctl event callback");
         return 1;
     }
 
@@ -897,6 +1098,7 @@ int main(void) {
         for (std::size_t i = ni + 1; i < fds.size(); ++i) {
             conn *nc = nullptr;
             unsigned char igot;
+            std::string_view syspath;
             if (fds[i].revents == 0) {
                 continue;
             }
@@ -989,23 +1191,51 @@ int main(void) {
                     }
                     nc->datastr.push_back(char(c));
                 }
+                igot = 0;
                 switch (nc->devtype) {
                     case DEVICE_DEV:
-                        igot = check_devnode(nc->datastr) ? 1 : 0;
+                        if (check_devnode(nc->datastr, nullptr, &syspath)) {
+                            igot = 1;
+                        }
                         break;
                     case DEVICE_SYS:
-                        igot = (map_sys.find(nc->datastr) != map_sys.end()) ? 1 : 0;
+                        syspath = nc->datastr;
+                        if (map_sys.find(nc->datastr) != map_sys.end()) {
+                            igot = 1;
+                        }
                         break;
-                    case DEVICE_NETIF:
-                        igot = (map_netif.find(nc->datastr) != map_netif.end()) ? 1 : 0;
+                    case DEVICE_NETIF: {
+                        auto it = map_netif.find(nc->datastr);
+                        if (it != map_netif.end()) {
+                            syspath = it->second;
+                            igot = 1;
+                        }
                         break;
-                    case DEVICE_MAC:
-                        igot = (map_mac.find(nc->datastr) != map_mac.end()) ? 1 : 0;
+                    }
+                    case DEVICE_MAC: {
+                        auto it = map_mac.find(nc->datastr);
+                        if (it != map_mac.end()) {
+                            syspath = it->second;
+                            igot = 1;
+                        }
                         break;
+                        break;
+                    }
                     default:
                         /* should never happen */
                         warnx("devmon: invalid devtype for %d", fds[i].fd);
                         goto bad_msg;
+                }
+                if (igot) {
+                    /* perform a syspath lookup and see if it's really ready */
+                    auto &dev = map_sys.at(std::string{syspath});
+                    if (dev.removed || dev.processing) {
+                        /* removed means we need 0 anyway, and processing means
+                         * the current event is done yet so we will signal it
+                         * later for proper waits-for behavior
+                         */
+                        igot = 0;
+                    }
                 }
                 std::printf(
                     "devmon: send status %d for %s for %d\n",
