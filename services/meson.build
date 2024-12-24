@@ -15,6 +15,7 @@ services = [
     'early-cryptdisks',
     'early-cryptdisks-early',
     'early-devices.target',
+    'early-devmon',
     'early-dmraid',
     'early-env',
     'early-fs-btrfs',
