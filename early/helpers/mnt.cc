@@ -409,7 +409,7 @@ static int do_prepare(char *root_opts) {
         return 1;
     }
     /* other initial pseudofs... */
-    if (do_try("/sys", "sys", "sysfs", procsys_opts)) {
+    if (do_try("/sys", "sysfs", "sysfs", procsys_opts)) {
         return 1;
     }
     if (do_try("/dev", "dev", "devtmpfs", dev_opts)) {
