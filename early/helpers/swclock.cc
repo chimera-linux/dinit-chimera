@@ -84,6 +84,32 @@ static int stat_reg(int dfd, char const *fpath, struct stat *st) {
     return 0;
 }
 
+bool convert_localtime(rtc_mod_t mod, unsigned long long &rtc_epoch) {
+    time_t rtc_lt;
+    struct tm *rtc_lm;
+    /* if not localtime, don't do anything */
+    if (mod != RTC_MOD_LOCALTIME) {
+        return true;
+    }
+    /* give up if we have 32-bit time_t and the rtc value does not fit */
+    if ((sizeof(time_t) == 4) && (rtc_epoch > INT32_MAX)) {
+        return false;
+    }
+    rtc_lt = (time_t)rtc_epoch;
+    /* gmtime assumes UTC, lie; the result is a localtime struct tm */
+    rtc_lm = gmtime(&rtc_lt);
+    if (!rtc_lm) {
+        return false;
+    }
+    /* convert our localtime to UTC */
+    rtc_lt = mktime(rtc_lm);
+    if (rtc_lt < 0) {
+        return false;
+    }
+    rtc_epoch = (unsigned long long)rtc_lt;
+    return true;
+}
+
 static int do_start(int dfd, time_t curt, rtc_mod_t mod) {
     struct timeval tv = {};
     struct stat st;
@@ -137,25 +163,8 @@ static int do_start(int dfd, time_t curt, rtc_mod_t mod) {
     /* rtc may be stored in utc or localtime
      * if it's localtime, adjust by timezone
      */
-    if (mod == RTC_MOD_LOCALTIME) {
-        time_t rtc_lt;
-        struct tm *rtc_lm;
-        /* give up if we have 32-bit time_t and the rtc value does not fit */
-        if ((sizeof(time_t) == 4) && (rtc_epoch > INT32_MAX)) {
-            goto regular_set;
-        }
-        rtc_lt = (time_t)rtc_epoch;
-        /* gmtime assumes UTC, lie; the result is a localtime struct tm */
-        rtc_lm = gmtime(&rtc_lt);
-        if (!rtc_lm) {
-            goto regular_set;
-        }
-        /* convert our localtime to UTC */
-        rtc_lt = mktime(rtc_lm);
-        if (rtc_lt < 0) {
-            goto regular_set;
-        }
-        rtc_epoch = (unsigned long long)rtc_lt;
+    if (!convert_localtime(mod, rtc_epoch)) {
+        goto regular_set;
     }
 
     errp = nullptr;
@@ -201,13 +210,16 @@ do_set:
     return 0;
 }
 
-static int do_stop(int dfd, time_t curt) {
+static int do_stop(int dfd, time_t curt, rtc_mod_t mod) {
     struct timespec times[2] = {};
     char epochs[32];
     char *errp = nullptr;
     unsigned long long epoch;
     FILE *rtcf;
     int ofd, fd;
+
+    /* unlink the old offset file just in case */
+    unlinkat(dfd, TS_OFFSET, 0);
 
     /* check if rtc node exists */
     rtcf = fopen(RTC_NODE, "r");
@@ -226,6 +238,12 @@ static int do_stop(int dfd, time_t curt) {
     epoch = strtoull(epochs, &errp, 10);
     if (!epoch || !errp || (*errp && (*errp != '\n'))) {
         /* junk value */
+        goto regular_save;
+    }
+
+    /* if the rtc is in localtime, adjust to current time */
+    if (!convert_localtime(mod, epoch)) {
+        /* could not adjust, don't save offset */
         goto regular_save;
     }
 
@@ -312,7 +330,7 @@ int main(int argc, char **argv) {
     if (!strcmp(argv[1], "start")) {
         return do_start(dfd, ctv.tv_sec, mod);
     } else if (!strcmp(argv[1], "stop")) {
-        return do_stop(dfd, ctv.tv_sec);
+        return do_stop(dfd, ctv.tv_sec, mod);
     }
 
     return usage(argv);
