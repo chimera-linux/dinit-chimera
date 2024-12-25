@@ -670,10 +670,7 @@ bool device::process(dinitctl *ctl) {
 static bool handle_device_dinit(struct udev_device *dev, device &devm) {
     /* if not formerly tagged, check if it's tagged now */
     if (!devm.has_tag) {
-        devm.has_tag = (
-            udev_device_has_tag(dev, "dinit") ||
-            udev_device_has_tag(dev, "systemd")
-        );
+        devm.has_tag = udev_device_has_tag(dev, "dinit");
     }
     /* if never tagged, take the fast path */
     if (!devm.has_tag) {

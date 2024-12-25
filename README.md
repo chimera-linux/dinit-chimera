@@ -214,6 +214,17 @@ depends-on = local.target
 depends-ms = device@netif:wlp170s0
 ```
 
+It is also possible to create soft dependencies of the device services on
+other services from within `udev` rules. To do this, the `DINIT_WAITS_FOR`
+property can be used and the `dinit` tag must exist on the device. Like so:
+
+```
+TAG+="dinit", ENV{DINIT_WAITS_FOR}+="svc1 svc2"
+```
+
+Any service that depends on a device service belonging to the above will
+be held back until the specified services have started or failed to start.
+
 ## Service targets
 
 The collection provides special "target" services, suffixed with `.target`,
