@@ -278,7 +278,9 @@ struct device {
     std::unordered_set<std::string> psvcset;
     /* services that are pending and will become psvcset after that is cleared */
     std::unordered_set<std::string> nsvcset;
+#ifdef HAVE_UDEV
     dinitctl_service_handle *device_svc = nullptr;
+#endif
     std::size_t pending_svcs = 0;
     /* device is most recently removed, regardless of event */
     bool removed = false;
@@ -446,7 +448,6 @@ struct device {
 
 /* canonical mapping of syspath to devices, also holds the memory */
 static std::unordered_map<std::string, device> map_sys;
-static std::unordered_map<dinitctl_service_handle *, device *> map_svcdev;
 
 /* service set */
 static std::unordered_set<std::string> svc_set{};
@@ -455,6 +456,8 @@ static std::unordered_set<std::string> svc_set{};
 static struct udev *udev;
 static dinitctl *dctl;
 static dinitctl_service_handle *dinit_system;
+
+static std::unordered_map<dinitctl_service_handle *, device *> map_svcdev;
 #endif
 
 static void sig_handler(int sign) {
