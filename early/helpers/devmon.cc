@@ -497,8 +497,6 @@ static void dinit_subsvc_load_cb_base(dinitctl *ctl, void *data, bool removal) {
         ctl, &ish, &st, nullptr
     );
     bool no_wake = false;
-    auto *dev_handle = dev->device_svc;
-    dev->device_svc = nullptr;
     if (ret < 0) {
         dinitctl_abort(ctl, errno);
         return;
@@ -551,7 +549,7 @@ static void dinit_subsvc_load_cb_base(dinitctl *ctl, void *data, bool removal) {
     };
     /* we don't care about if it already exists or whatever... */
     if (dinitctl_add_remove_service_dependency_async(
-        ctl, dev_handle, ish, DINITCTL_DEPENDENCY_WAITS_FOR,
+        ctl, dev->device_svc, ish, DINITCTL_DEPENDENCY_WAITS_FOR,
         removal, !removal, no_wake ? dep_nowake_cb : dep_cb, ish
     ) < 0) {
         dinitctl_abort(ctl, errno);
@@ -642,6 +640,7 @@ bool device::process(dinitctl *ctl) {
         processing = pending = false;
         return false;
     }
+    device_svc = nullptr;
     /* signal the readiness to clients */
     ready(removal ? 0 : 1);
     /* shuffle the sets; previous current set becomes removal set */
@@ -690,13 +689,12 @@ static bool handle_device_dinit(struct udev_device *dev, device &devm) {
             svcs = usvc;
         }
     }
-    /* skip any initial whitespace just in case */
-    while (std::isspace(*svcs)) {
-        ++svcs;
-    }
     /* add stuff to the set */
     devm.nsvcset.clear();
     for (;;) {
+        while (std::isspace(*svcs)) {
+            ++svcs;
+        }
         auto *sep = svcs;
         while (*sep && !std::isspace(*sep)) {
             ++sep;
@@ -707,6 +705,7 @@ static bool handle_device_dinit(struct udev_device *dev, device &devm) {
             break;
         }
         devm.nsvcset.emplace(sv);
+        svcs = sep;
     }
     /* we are not keeping a queue, so if multiple add/del events comes in while
      * we are still processing a previous one, only the latest will be processed
@@ -1021,6 +1020,21 @@ int main(void) {
         pfd3.fd = dinitctl_get_fd(dctl);
         pfd3.events = POLLIN | POLLHUP;
         pfd3.revents = 0;
+    }
+
+    /* dispatch pending dinit events */
+    std::printf("devmon: drain dinit write queue\n");
+    for (;;) {
+        auto nev = dinitctl_dispatch(dctl, 0, nullptr);
+        if (nev < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            warn("dinitctl_dispatch failed");
+            return 1;
+        } else if (!nev) {
+            break;
+        }
     }
 #endif
 
