@@ -77,6 +77,7 @@ static char const *notag_subsys[] = {
     "block",
     "net",
     "tty",
+    "usb",
     nullptr
 };
 #endif
@@ -90,6 +91,7 @@ enum {
     DEVICE_DEV,
     DEVICE_NETIF,
     DEVICE_MAC,
+    DEVICE_USB,
 };
 
 static bool sock_new(char const *path, int &sock, mode_t mode) {
@@ -272,6 +274,8 @@ struct device {
     std::string mac{};
     std::string syspath{};
     std::string subsys{};
+    /* for usb devices, a set of real syspaths that share this */
+    std::unordered_set<dev_t> devset;
     /* services that are currently dependencies and being dropped */
     std::unordered_set<std::string> dsvcset;
     /* services that are in process of becoming dependencies */
@@ -379,6 +383,11 @@ struct device {
 
     void ready(unsigned char status) {
         std::printf("devmon: ready %d for '%s'\n", int(status), syspath.c_str());
+        if (subsys == "usb") {
+            write_gen(DEVICE_USB, status, syspath);
+            /* we don't support syspaths */
+            return;
+        }
         write_gen(DEVICE_SYS, status, syspath);
         if (subsys == "net") {
             if (!name.empty()) {
@@ -395,8 +404,10 @@ struct device {
     }
 
 #ifdef HAVE_UDEV
-    void init(struct udev_device *dev) {
-        if (subsys != "net") {
+    void init(struct udev_device *dev, dev_t devnum) {
+        if (devnum) {
+            devset.emplace(devnum);
+        } else if (subsys != "net") {
             init_dev(udev_device_get_devnode(dev));
         } else {
             init_net(
@@ -407,8 +418,10 @@ struct device {
         removed = false;
     }
 
-    void set(struct udev_device *dev) {
-        if (subsys != "net") {
+    void set(struct udev_device *dev, dev_t devnum) {
+        if (devnum) {
+            devset.emplace(devnum);
+        } else if (subsys != "net") {
             set_dev(udev_device_get_devnode(dev));
         } else {
             set_ifname(udev_device_get_sysname(dev));
@@ -448,6 +461,7 @@ struct device {
 
 /* canonical mapping of syspath to devices, also holds the memory */
 static std::unordered_map<std::string, device> map_sys;
+static std::unordered_map<dev_t, device *> map_usb{};
 
 /* service set */
 static std::unordered_set<std::string> svc_set{};
@@ -724,10 +738,27 @@ static bool handle_device_dinit(struct udev_device *dev, device &devm) {
 static bool add_device(
     struct udev_device *dev, char const *sysp, char const *ssys
 ) {
+    std::string usbpath;
+    dev_t devnum = 0;
+    if (!std::strcmp(ssys, "usb")) {
+        /* we don't support syspaths for usb devices... */
+        auto *vendid = udev_device_get_sysattr_value(dev, "idVendor");
+        auto *prodid = udev_device_get_sysattr_value(dev, "idProduct");
+        if (!vendid || !prodid) {
+            /* don't add devices without a clear id at all... */
+            return true;
+        }
+        /* construct a match id */
+        usbpath = vendid;
+        usbpath.push_back(':');
+        usbpath.append(prodid);
+        sysp = usbpath.c_str();
+        devnum = udev_device_get_devnum(dev);
+    }
     auto odev = map_sys.find(sysp);
     if ((odev != map_sys.end()) && !odev->second.removed) {
         /* preexisting entry */
-        odev->second.set(dev);
+        odev->second.set(dev, devnum);
         if (!handle_device_dinit(dev, odev->second)) {
             return false;
         }
@@ -737,7 +768,10 @@ static bool add_device(
     auto &devm = map_sys[sysp];
     devm.syspath = sysp;
     devm.subsys = ssys;
-    devm.init(dev);
+    devm.init(dev, devnum);
+    if (devnum) {
+        map_usb[devnum] = &devm;
+    }
     if (!handle_device_dinit(dev, devm)) {
         return false;
     }
@@ -745,6 +779,24 @@ static bool add_device(
 }
 
 static bool remove_device(struct udev_device *dev, char const *sysp) {
+    auto devn = udev_device_get_devnum(dev);
+    if (devn) {
+        auto dit = map_usb.find(devn);
+        if (dit != map_usb.end()) {
+            auto &dev = *(dit->second);
+            /* the match id */
+            sysp = dev.syspath.c_str();
+            /* remove the device from the registered set and drop the mapping */
+            dev.devset.erase(devn);
+            map_usb.erase(dit);
+            /* if there are still devices with this match id, bail */
+            if (!dev.devset.empty()) {
+                return true;
+            }
+        } else {
+            /* not usb */
+        }
+    }
     auto it = map_sys.find(sysp);
     if ((it == map_sys.end()) || it->second.removed) {
         return true;
@@ -808,7 +860,13 @@ static bool resolve_device(struct udev_monitor *mon, bool tagged) {
         }
     }
     /* whether to drop it */
-    bool rem = !std::strcmp(udev_device_get_action(dev), "remove");
+    auto *act = udev_device_get_action(dev);
+    if (!std::strcmp(act, "bind") || !std::strcmp(act, "unbind")) {
+        /* we don't care about these actions */
+        udev_device_unref(dev);
+        return true;
+    }
+    bool rem = !std::strcmp(act, "remove");
     std::printf("devmon: %s device '%s'\n", rem ? "drop" : "add", sysp);
     bool ret;
     if (rem) {
@@ -1164,6 +1222,8 @@ int main(void) {
                         nc->devtype = DEVICE_NETIF;
                     } else if (!std::strcmp(msgt, "mac")) {
                         nc->devtype = DEVICE_MAC;
+                    } else if (!std::strcmp(msgt, "usb")) {
+                        nc->devtype = DEVICE_USB;
                     } else {
                         warnx(
                             "devmon: invalid requested type '%s' for %d",
@@ -1209,6 +1269,7 @@ int main(void) {
                         }
                         break;
                     case DEVICE_SYS:
+                    case DEVICE_USB:
                         syspath = nc->datastr;
                         if (map_sys.find(nc->datastr) != map_sys.end()) {
                             igot = 1;

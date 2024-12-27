@@ -179,14 +179,21 @@ These only apply if the optional kdump service is installed.
 
 The `dinit-chimera` suite allows services to depend on devices. Currently,
 it is possible to depend on individual devices (`/dev/foo`), on `/sys` paths,
-on network interfaces, and on MAC addresses; this is set by the argument
-provided to the `device` service.
+on network interfaces, on MAC addresses, and on USB `vendor:product` strings;
+this is set by the argument provided to the `device` service.
 
 For devices, it just looks like `/dev/foo`, for `/sys` paths it's a long native
 path like `/sys/devices/...`, for network interfaces it's `ifname:foo`, for MAC
-addresses it's `mac:foo` (the address must be in lowercase format).
+addresses it's `mac:foo` (the address must be in lowercase format), for USB
+IDs it's `usb:vendor:product` with lowercase hex (e.g. `usb:1d6b:0003`).
 
-Devices from the `block`, `net`, and `tty` subsystems are matched automatically.
+For non-USB devices, they may appear and disappear according to their syspath.
+For USB devices, which cannot be matched accurately by a syspath as you may have
+multiple devices with the same vendor/product ID pair in your system, they
+appear with the first device and disappear with the last device.
+
+Devices from the `block`, `net`, `tty`, and `usb` subsystems are matched
+automatically.
 If you wish to match devices from other subsystems, they have to carry
 the tag `dinit` or `systemd` (for compatibility).
 

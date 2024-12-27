@@ -57,14 +57,15 @@ int main(int argc, char **argv) {
         errx(1, "invalid file descriptor for readiness (%d)", fdnum);
     }
 
-    char *devn = argv[2];
+    char *devn = argv[1];
 
     bool isdev = !std::strncmp(devn, "/dev/", 5);
     bool issys = !std::strncmp(devn, "/sys/", 5);
     bool isnet = !std::strncmp(devn, "netif:", 3);
     bool ismac = !std::strncmp(devn, "mac:", 4);
+    bool isusb = !std::strncmp(devn, "usb:", 4);
 
-    if (!isdev && !isnet && !ismac && !issys) {
+    if (!isdev && !isnet && !ismac && !issys && !isusb) {
         errx(1, "invalid device value");
     }
 
