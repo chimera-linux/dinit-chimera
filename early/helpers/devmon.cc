@@ -721,35 +721,6 @@ static bool handle_device_dinit(struct udev_device *dev, device &devm) {
     return true;
 }
 
-static bool initial_populate(struct udev_enumerate *en) {
-    if (udev_enumerate_scan_devices(en) < 0) {
-        std::fprintf(stderr, "could not scan enumerate\n");
-        return false;
-    }
-
-    struct udev_list_entry *en_devices = udev_enumerate_get_list_entry(en);
-    struct udev_list_entry *en_entry;
-
-    udev_list_entry_foreach(en_entry, en_devices) {
-        auto *path = udev_list_entry_get_name(en_entry);
-        struct udev_device *dev = udev_device_new_from_syspath(udev, path);
-        if (!dev) {
-            std::fprintf(stderr, "could not construct device from enumerate\n");
-            udev_enumerate_unref(en);
-            return false;
-        }
-        auto &devm = map_sys[path];
-        devm.syspath = path;
-        devm.subsys = udev_device_get_subsystem(dev);
-        devm.init(dev);
-        if (!handle_device_dinit(dev, devm)) {
-            udev_enumerate_unref(en);
-            return false;
-        }
-    }
-    return true;
-}
-
 static bool add_device(
     struct udev_device *dev, char const *sysp, char const *ssys
 ) {
@@ -784,6 +755,31 @@ static bool remove_device(struct udev_device *dev, char const *sysp) {
         return false;
     }
     devm.remove();
+    return true;
+}
+
+static bool initial_populate(struct udev_enumerate *en) {
+    if (udev_enumerate_scan_devices(en) < 0) {
+        std::fprintf(stderr, "could not scan enumerate\n");
+        return false;
+    }
+
+    struct udev_list_entry *en_devices = udev_enumerate_get_list_entry(en);
+    struct udev_list_entry *en_entry;
+
+    udev_list_entry_foreach(en_entry, en_devices) {
+        auto *path = udev_list_entry_get_name(en_entry);
+        struct udev_device *dev = udev_device_new_from_syspath(udev, path);
+        if (!dev) {
+            std::fprintf(stderr, "could not construct device from enumerate\n");
+            udev_enumerate_unref(en);
+            return false;
+        }
+        if (!add_device(dev, path, udev_device_get_subsystem(dev))) {
+            udev_enumerate_unref(en);
+            return false;
+        }
+    }
     return true;
 }
 
