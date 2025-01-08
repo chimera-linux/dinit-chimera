@@ -22,6 +22,7 @@ scripts = [
     'console.sh',
     'cryptdisks.sh',
     'dev.sh',
+    'devmon.sh',
     'dmraid.sh',
     'done.sh',
     'env.sh',
