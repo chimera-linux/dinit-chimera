@@ -1002,16 +1002,6 @@ int main(void) {
         }
     }
 
-    if (!initial_populate(en1) || !initial_populate(en2)) {
-        udev_enumerate_unref(en1);
-        udev_enumerate_unref(en2);
-        udev_unref(udev);
-        return 1;
-    }
-
-    udev_enumerate_unref(en1);
-    udev_enumerate_unref(en2);
-
     struct udev_monitor *mon1 = udev_monitor_new_from_netlink(udev, "udev");
     if (!mon1) {
         std::fprintf(stderr, "could not create udev monitor\n");
@@ -1058,6 +1048,16 @@ int main(void) {
         udev_unref(udev);
         return 1;
     }
+
+    if (!initial_populate(en1) || !initial_populate(en2)) {
+        udev_enumerate_unref(en1);
+        udev_enumerate_unref(en2);
+        udev_unref(udev);
+        return 1;
+    }
+
+    udev_enumerate_unref(en1);
+    udev_enumerate_unref(en2);
 
     {
         auto &pfd1 = fds.emplace_back();
