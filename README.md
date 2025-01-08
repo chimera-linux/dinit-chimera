@@ -198,8 +198,7 @@ If you wish to match devices from other subsystems, they have to carry
 the tag `dinit` or `systemd` (for compatibility).
 
 For this functionality to work, it is necessary to build the suite with
-`libudev` support; while the helper programs will build even without it,
-they will not have any monitoring support.
+`libudev` support; all device dependencies will fail when this is not done.
 
 Example service that will not come up unless `/dev/sda1` is around, and will
 shut down if `/dev/sda1` disappears:

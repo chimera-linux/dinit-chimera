@@ -68,8 +68,13 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#ifdef HAVE_UDEV
 #include <libdinitctl.h>
+
+#ifndef HAVE_UDEV
+#error Compiling devmon without udev
+#endif
+
+#ifdef HAVE_UDEV
 #include <libudev.h>
 
 /* subsystems we always match even without a tag */
@@ -282,9 +287,7 @@ struct device {
     std::unordered_set<std::string> psvcset;
     /* services that are pending and will become psvcset after that is cleared */
     std::unordered_set<std::string> nsvcset;
-#ifdef HAVE_UDEV
     dinitctl_service_handle *device_svc = nullptr;
-#endif
     std::size_t pending_svcs = 0;
     /* device is most recently removed, regardless of event */
     bool removed = false;
@@ -429,9 +432,9 @@ struct device {
         }
         removed = false;
     }
+#endif
 
     bool process(dinitctl *ctl);
-#endif
 
     void remove() {
         if (subsys == "net") {
@@ -468,17 +471,17 @@ static std::unordered_set<std::string> svc_set{};
 
 #ifdef HAVE_UDEV
 static struct udev *udev;
+#endif
+
 static dinitctl *dctl;
 static dinitctl_service_handle *dinit_system;
 
 static std::unordered_map<dinitctl_service_handle *, device *> map_svcdev;
-#endif
 
 static void sig_handler(int sign) {
     write(sigpipe[1], &sign, sizeof(sign));
 }
 
-#ifdef HAVE_UDEV
 static void handle_dinit_event(
     dinitctl *ctl, dinitctl_service_handle *handle,
     enum dinitctl_service_event, dinitctl_service_status const *, void *
@@ -684,6 +687,7 @@ bool device::process(dinitctl *ctl) {
     return true;
 }
 
+#ifdef HAVE_UDEV
 static bool handle_device_dinit(struct udev_device *dev, device &devm) {
     /* if not formerly tagged, check if it's tagged now */
     if (!devm.has_tag) {
@@ -922,7 +926,6 @@ int main(void) {
     fds.reserve(16);
     conns.reserve(16);
 
-#ifdef HAVE_UDEV
     std::printf("devmon: init dinit\n");
     /* set up dinit control connection */
     auto *denv = std::getenv("DINIT_CS_FD");
@@ -961,6 +964,7 @@ int main(void) {
         return 1;
     }
 
+#ifdef HAVE_UDEV
     std::printf("devmon: udev init\n");
     udev = udev_new();
     if (!udev) {
@@ -1075,6 +1079,7 @@ int main(void) {
         pfd3.events = POLLIN | POLLHUP;
         pfd3.revents = 0;
     }
+#endif
 
     /* dispatch pending dinit events */
     std::printf("devmon: drain dinit write queue\n");
@@ -1090,7 +1095,6 @@ int main(void) {
             break;
         }
     }
-#endif
 
     std::printf("devmon: main loop\n");
 
@@ -1146,6 +1150,7 @@ int main(void) {
             ret = 1;
             break;
         }
+#endif
         if (fds[++ni].revents) {
             for (;;) {
                 auto nev = dinitctl_dispatch(dctl, 0, nullptr);
@@ -1161,7 +1166,6 @@ int main(void) {
                 }
             }
         }
-#endif
         /* handle connections */
         for (std::size_t i = ni + 1; i < fds.size(); ++i) {
             conn *nc = nullptr;
@@ -1363,8 +1367,8 @@ do_compact:
     udev_monitor_unref(mon1);
     udev_monitor_unref(mon2);
     udev_unref(udev);
-    dinitctl_close(dctl);
 #endif
+    dinitctl_close(dctl);
     std::printf("devmon: exit with %d\n", ret);
     /* intended return code */
     return ret;
