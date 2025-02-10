@@ -1,0 +1,7 @@
+# zram swap
+
+type = scripted
+command = @SCRIPT_PATH@/zram.sh start
+stop-command = @SCRIPT_PATH@/zram.sh stop
+depends-on = early-fs-local.target
+before = pre-local.target

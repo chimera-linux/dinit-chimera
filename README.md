@@ -107,6 +107,8 @@ exit with success if the tools aren't located.
   * For kernel crashdump support
 * [kexec-tools](https://kernel.org/pub/linux/utils/kernel/kexec)
   * For kernel crashdump support
+* `zramctl`, `mkswap`, `swapon`, `swapoff` from `util-linux`
+  * For ZRAM swap support
 
 ## Kernel command line
 
