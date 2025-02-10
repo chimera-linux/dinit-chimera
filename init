@@ -28,16 +28,30 @@ fi
 unset dinit_auto_recovery dinit_quiet dinit_log_level
 unset dinit_console_level dinit_log_file
 
-# in a container, sanitize PATH and exec directly
-# as we don't have a way to deal with the init env
-# after the fact, and there is no initramfs anyway
+export PATH=@DEFAULT_PATH_ENV@
+
+# in a container, exec directly as we don't have a way to deal with
+# the init env after the fact, and there is no initramfs anyway
 if [ -n "${container+x}" ]; then
-    export PATH=@DEFAULT_PATH_ENV@
     exec @DINIT_PATH@ "$@"
 fi
 
+# afaik getent is not a posix command
+getent_cmd=$(command -v getent)
+
+if -n "$getent_cmd"; then
+    # retrieve using getent if we can
+    HOME=$("$getent_cmd" passwd root | cut -f6 -d:)
+else
+    # otherwise just grep from the passwd database...
+    HOME=$(grep "^root:" /etc/passwd | cut -f6 -d:)
+fi
+
+# fallback just in case we don't have anything
+[ -n "$HOME" ] || HOME=/
+
 # minimal defaults
-set -- PATH=@DEFAULT_PATH_ENV@ HOME=/ @DINIT_PATH@ "$@"
+set -- PATH=@DEFAULT_PATH_ENV@ "HOME=$HOME" @DINIT_PATH@ "$@"
 
 # these need to be readable before we have procfs
 if [ "$dinit_early_debug" ]; then
@@ -54,4 +68,4 @@ if [ "$dinit_early_root_remount" ]; then
 fi
 
 # if not a container, exec in a mostly clean env...
-exec /usr/bin/env -i "$@"
+exec env -i "$@"
