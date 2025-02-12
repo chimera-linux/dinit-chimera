@@ -404,10 +404,8 @@ static int do_prepare(char *root_opts) {
     if (do_try("/proc", "proc", "proc", procsys_opts)) {
         return 1;
     }
-    /* try remounting / with the params we want */
-    if (do_remount("/", root_opts)) {
-        return 1;
-    }
+    /* try remounting / with the params we want; this may fail depending on fs */
+    do_remount("/", root_opts);
     /* other initial pseudofs... */
     if (do_try("/sys", "sysfs", "sysfs", procsys_opts)) {
         return 1;
