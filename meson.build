@@ -1,7 +1,7 @@
 project(
     'dinit-chimera',
     ['cpp'],
-    version: '0.99.17',
+    version: '0.99.18',
     default_options: [
         'prefix=/usr',
         'cpp_std=c++17',
