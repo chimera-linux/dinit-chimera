@@ -3,3 +3,4 @@ command = @SCRIPT_PATH@/zram.sh start $1
 stop-command = @SCRIPT_PATH@/zram.sh stop $1
 depends-on: early-prepare.target
 depends-on: early-devd
+before: early-fs-pre
