@@ -5,6 +5,16 @@
 # environments
 #
 
+# source this file if it exists, for any overrides
+if [ -r /etc/dinit/init ]; then
+    . /etc/dinit/init
+fi
+
+# global default, may be "unlimited" or any integer value
+if [ -n "$dinit_rlimit_core" ]; then
+    ulimit -c "$dinit_rlimit_core"
+fi
+
 if [ "$dinit_auto_recovery" = "1" ]; then
     set -- --auto-recovery "$@"
 fi
