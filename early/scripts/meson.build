@@ -51,6 +51,10 @@ scripts = [
     'try-kdump.sh',
 ]
 
+if build_machine.kernel() == 'linux'
+    scripts += ['zram.sh']
+endif
+
 foreach scr: scripts
     configure_file(
         input: scr,

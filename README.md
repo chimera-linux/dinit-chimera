@@ -231,6 +231,50 @@ TAG+="dinit", ENV{DINIT_WAITS_FOR}+="svc1 svc2"
 Any service that depends on a device service belonging to the above will
 be held back until the specified services have started or failed to start.
 
+## Zram support
+
+This suite supports management of zram devices on Linux.
+
+The following configuration files are checked:
+
+```
+/etc/dinit-zram.d/*.conf
+/run/dinit-zram.d/*.conf
+/usr/local/lib/dinit-zram.d/*.conf
+/usr/lib/dinit-zram.d/*.conf
+/etc/dinit-zram.conf
+```
+
+The directory snippet paths are checked in that order and the first directory
+to contain a config snippet of that name is prioritized (i.e. every file name
+is only loaded once). The `/etc/dinit-zram.conf` configuration file is loaded
+last and always (if it exists).
+
+The syntax is like this:
+
+```
+; a comment
+# also a comment
+[zram0]
+size = 4G
+algorithm = zstd
+streams = 8
+format = mkswap -U clear %0
+```
+
+Fields that are specified later override those that are specified earlier,
+so you can have e.g. a config file defining a zram device and then a later
+one defining more details for it.
+
+The above fields are currently the only supported ones (more will be added
+later as well as more syntax). All but `size` are optional. The `format`
+field specifies a command to use to format the device once set up and the
+default is the one above, to set up swap space. You can set custom commands
+for e.g. zram ramdisks with real filesystems on them.
+
+Once you have a configuration file, you can activate the device by enabling
+the `zram-device@zramN` service.
+
 ## Service targets
 
 The collection provides special "target" services, suffixed with `.target`,

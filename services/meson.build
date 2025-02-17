@@ -61,6 +61,10 @@ services = [
     'time-sync.target',
 ]
 
+if build_machine.kernel() == 'linux'
+    services += ['zram-device']
+endif
+
 foreach srv: services
     configure_file(
         input: srv,
