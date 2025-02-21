@@ -2,6 +2,6 @@
 # of every other service. In addition to that it also
 # provides the user-enabled service directory.
 
-type        = internal
-depends-on  = system
-waits-for.d = /etc/dinit.d/boot.d
+type = internal
+depends-on: system
+waits-for.d: /etc/dinit.d/boot.d

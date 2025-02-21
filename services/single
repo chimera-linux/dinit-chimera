@@ -1,7 +1,5 @@
-# Single-user mode, it simply starts a shell and resumes boot on exit
-
-type     = process
+type = process
 command  = @DINIT_SULOGIN_PATH@
-restart  = false
-options  = shares-console
-chain-to = boot
+restart = false
+chain-to: boot
+options: shares-console

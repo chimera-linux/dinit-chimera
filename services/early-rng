@@ -1,8 +1,6 @@
-# seed the rng
-
-type         = scripted
-command      = @SCRIPT_PATH@/rng.sh start
+type = scripted
+command = @SCRIPT_PATH@/rng.sh start
 stop-command = @SCRIPT_PATH@/rng.sh stop
-depends-on   = early-devices.target
-waits-for    = early-modules.target
-waits-for    = early-fs-local.target
+depends-on: early-devices.target
+waits-for: early-modules.target
+waits-for: early-fs-local.target

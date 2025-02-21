@@ -1,6 +1,5 @@
-# set the console keyboard layout
-# can be run earlier than full console setup
+# set console keyboard
 
-type       = scripted
-command    = @SCRIPT_PATH@/console.sh keyboard
-depends-on = early-devices.target
+type = scripted
+command = @SCRIPT_PATH@/console.sh keyboard
+depends-on: early-devices.target

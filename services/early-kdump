@@ -1,6 +1,6 @@
-# handle kernel crash dump
+# handle kernel crash dumps
 
-type       = scripted
-command    = @SCRIPT_PATH@/try-kdump.sh
-depends-on = early-devices.target
-depends-on = early-fs-local.target
+type = scripted
+command = @SCRIPT_PATH@/try-kdump.sh
+depends-on: early-devices.target
+depends-on: early-fs-local.target

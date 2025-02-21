@@ -1,5 +1,3 @@
-# Mount pseudo-filesystems such as /proc
-
-type       = scripted
-command    = @SCRIPT_PATH@/pseudofs.sh
-depends-on = early-env
+type = scripted
+command = @SCRIPT_PATH@/pseudofs.sh
+depends-on: early-env

@@ -1,6 +1,4 @@
-# Create volatile files and directories
-
-type       = scripted
-command    = @SCRIPT_PATH@/tmpfiles.sh --create --remove --boot --exclude-prefix=/dev
-depends-on = early-fs-local.target
-depends-on = pre-local.target
+type = scripted
+command = @SCRIPT_PATH@/tmpfiles.sh --create --remove --boot --exclude-prefix=/dev
+depends-on: early-fs-local.target
+depends-on: pre-local.target

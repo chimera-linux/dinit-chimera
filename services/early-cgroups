@@ -1,6 +1,4 @@
-# Set up cgroup mounts
-
-type       = scripted
-command    = @SCRIPT_PATH@/cgroups.sh
-depends-on = early-kernel-env
-depends-on = early-pseudofs
+type = scripted
+command = @SCRIPT_PATH@/cgroups.sh
+depends-on: early-kernel-env
+depends-on: early-pseudofs

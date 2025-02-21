@@ -1,5 +1,5 @@
-# Device events have been processed
+# all device events have been processed
 
-type       = internal
-depends-on = early-devd
-depends-ms = early-devmon
+type = internal
+depends-on: early-devd
+depends-ms: early-devmon

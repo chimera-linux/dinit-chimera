@@ -1,10 +1,10 @@
-# crypt devices not dependent on lvm
+# crypt devices available directly
 
-type       = scripted
-command    = @SCRIPT_PATH@/cryptdisks.sh early start
-depends-on = early-devices.target
-depends-on = early-keyboard.target
-depends-ms = early-root-fsck
-waits-for  = early-dmraid
-waits-for  = early-mdadm
-options    = starts-on-console
+type = scripted
+command = @SCRIPT_PATH@/cryptdisks.sh early start
+depends-on: early-devices.target
+depends-on: early-keyboard.target
+depends-ms: early-root-fsck
+waits-for: early-dmraid
+waits-for: early-mdadm
+options: starts-on-console

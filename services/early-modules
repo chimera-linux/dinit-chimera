@@ -1,5 +1,5 @@
-# Load kernel modules from modules-load.d
+# handle modules-load.d
 
-type       = scripted
-command    = @SCRIPT_PATH@/modules.sh
-depends-ms = early-modules-early
+type = scripted
+command = @SCRIPT_PATH@/modules.sh
+depends-ms: early-modules-early

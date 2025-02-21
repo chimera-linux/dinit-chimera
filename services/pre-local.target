@@ -1,14 +1,14 @@
-# core system init has been done
+# core system init is done
 
-type       = scripted
-command    = @SCRIPT_PATH@/done.sh
-depends-on = early-fs-local.target
-depends-on = early-console.target
-depends-on = early-net-lo
-depends-on = early-hostname
-waits-for  = early-swap
-waits-for  = early-rng
-waits-for  = early-machine-id
-waits-for  = early-sysctl
-waits-for  = early-binfmt
-waits-for  = early-kdump
+type = scripted
+command = @SCRIPT_PATH@/done.sh
+depends-on: early-fs-local.target
+depends-on: early-console.target
+depends-on: early-net-lo
+depends-on: early-hostname
+waits-for: early-swap
+waits-for: early-rng
+waits-for: early-machine-id
+waits-for: early-sysctl
+waits-for: early-binfmt
+waits-for: early-kdump

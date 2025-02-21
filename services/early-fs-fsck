@@ -1,7 +1,5 @@
-# Check auxiliary filesystems
-
-type       = scripted
-command    = @SCRIPT_PATH@/fs-fsck.sh
-depends-on = early-fs-pre.target
-waits-for  = early-fs-btrfs
-options    = starts-on-console
+type = scripted
+command = @SCRIPT_PATH@/fs-fsck.sh
+depends-on: early-fs-pre.target
+waits-for: early-fs-btrfs
+options: starts-on-console

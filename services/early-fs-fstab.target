@@ -1,9 +1,7 @@
-# other non-network filesystems
-
-type       = scripted
-command    = @SCRIPT_PATH@/fs-fstab.sh start
-depends-on = early-fs-pre.target
-waits-for  = early-fs-zfs
-waits-for  = early-fs-btrfs
-depends-ms = early-fs-fsck
-waits-for  = early-root-rw.target
+type = scripted
+command = @SCRIPT_PATH@/fs-fstab.sh start
+depends-on: early-fs-pre.target
+depends-ms: early-fs-fsck
+waits-for: early-fs-zfs
+waits-for: early-fs-btrfs
+waits-for: early-root-rw.target

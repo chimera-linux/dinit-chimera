@@ -1,4 +1,4 @@
-# Reached before network-related daemons are started
+# reached before net daemons are started
 
-type        = internal
-depends-on  = local.target
+type = internal
+depends-on: local.target

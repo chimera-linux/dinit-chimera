@@ -1,9 +1,7 @@
-# lvm vg setup
-
-type       = scripted
-command    = @SCRIPT_PATH@/lvm.sh start
-depends-on = early-devices.target
-depends-on = early-cryptdisks-early
-depends-ms = early-root-fsck
-waits-for  = early-dmraid
-waits-for  = early-mdadm
+type = scripted
+command = @SCRIPT_PATH@/lvm.sh start
+depends-on: early-devices.target
+depends-on: early-cryptdisks-early
+depends-ms: early-root-fsck
+waits-for: early-dmraid
+waits-for: early-mdadm

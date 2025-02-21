@@ -1,8 +1,8 @@
-# Earliest system bringup target
+# earliest system bringup target
 
-type       = internal
-depends-on = early-env
-depends-on = early-pseudofs
-depends-on = early-kernel-env
-depends-on = early-tmpfs
-depends-on = early-cgroups
+type = internal
+depends-on: early-env
+depends-on: early-pseudofs
+depends-on: early-kernel-env
+depends-on: early-tmpfs
+depends-on: early-cgroups

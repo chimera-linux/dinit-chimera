@@ -1,5 +1,5 @@
-# Virtual service run before login is enabled
+# virtual service run before login is enabled
 
-type       = internal
-depends-on = local.target
-options    = runs-on-console
+type = internal
+depends-on: local.target
+options: runs-on-console

@@ -1,6 +1,5 @@
-# Some kernel modules must be loaded before starting device manager
-# Load them by looking at the output of the equivalent of `kmod static-nodes`
+# static kernel modules loaded before device manager
 
-type       = scripted
-command    = @SCRIPT_PATH@/modules-early.sh
-depends-on = early-prepare.target
+type = scripted
+command = @SCRIPT_PATH@/modules-early.sh
+depends-on: early-prepare.target

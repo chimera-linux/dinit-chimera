@@ -2,6 +2,6 @@
 
 type = process
 command = @SCRIPT_PATH@/devmon.sh
-depends-on = early-devd
-depends-ms = early-dev-settle
 smooth-recovery = yes
+depends-on: early-devd
+depends-ms: early-dev-settle

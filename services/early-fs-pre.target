@@ -1,7 +1,7 @@
-# Reached just before filesystems are checked and mounted
+# just before filesystems are checked and mounted
 
-type       = internal
-depends-on = early-devices.target
-depends-on = early-cryptdisks
-waits-for  = early-dmraid
-waits-for  = early-mdadm
+type = internal
+depends-on: early-devices.target
+depends-on: early-cryptdisks
+waits-for: early-dmraid
+waits-for: early-mdadm

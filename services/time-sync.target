@@ -1,4 +1,4 @@
-# Virtual service for others to depend on; time should be synced now
+# time should be synced before this is reached
 
-type        = internal
-depends-on  = local.target
+type = internal
+depends-on: local.target

@@ -1,6 +1,4 @@
-# Set up env vars from the kernel
-
-type       = scripted
-command    = @SCRIPT_PATH@/kernel-env.sh
-options    = pass-cs-fd
-depends-on = early-pseudofs
+type = scripted
+command = @SCRIPT_PATH@/kernel-env.sh
+depends-on: early-pseudofs
+options: pass-cs-fd

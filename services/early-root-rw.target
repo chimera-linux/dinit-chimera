@@ -1,6 +1,4 @@
-# Remount root filesystem as r/w
-
-type       = scripted
-command    = @SCRIPT_PATH@/root-rw.sh
-depends-ms = early-root-fsck
-options    = starts-rwfs
+type = scripted
+command = @SCRIPT_PATH@/root-rw.sh
+depends-ms: early-root-fsck
+options: starts-rwfs

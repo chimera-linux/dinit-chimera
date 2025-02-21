@@ -1,4 +1,4 @@
-# Virtual service for others to depend on; bring up networking daemons
+# virtual service for others to depend on; bring up networking daemons
 
-type        = internal
-depends-on  = pre-network.target
+type = internal
+depends-on: pre-network.target

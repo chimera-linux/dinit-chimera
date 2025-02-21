@@ -1,11 +1,11 @@
-# all remaining crypt devices
+# remaining crypto devices
 
-type       = scripted
-command    = @SCRIPT_PATH@/cryptdisks.sh remaining start
-depends-on = early-devices.target
-depends-on = early-cryptdisks-early
-depends-on = early-dmraid
-depends-on = early-lvm
-depends-ms = early-root-fsck
-waits-for  = early-mdadm
-options    = starts-on-console
+type = scripted
+command = @SCRIPT_PATH@/cryptdisks.sh remaining start
+depends-on: early-devices.target
+depends-on: early-cryptdisks-early
+depends-on: early-dmraid
+depends-on: early-lvm
+depends-ms: early-root-fsck
+waits-for: early-mdadm
+options: starts-on-console

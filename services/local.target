@@ -1,7 +1,7 @@
 # rc.local has been run
 
-type       = scripted
-command    = @SCRIPT_PATH@/local.sh
-depends-on = pre-local.target
-depends-on = early-tmpfiles
-waits-for  = early-bless-boot
+type = scripted
+command = @SCRIPT_PATH@/local.sh
+depends-on: pre-local.target
+depends-on: early-tmpfiles
+waits-for: early-bless-boot
