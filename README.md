@@ -13,6 +13,7 @@ Currently the documentation for the suite is lacking, which is also to be done.
 ## Dependencies
 
 * [dinit](https://github.com/davmac314/dinit) (0.18.0 or newer)
+* Linux kernel 5.10 or newer
 * POSIX shell
 * POSIX core utilities
   * We test [chimerautils](https://github.com/chimera-linux/chimerautils)

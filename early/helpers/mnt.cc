@@ -42,6 +42,7 @@
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <sys/utsname.h>
 
 /* fallback; not accurate but good enough for early boot */
 static int mntpt_noproc(char const *inpath, struct stat *st) {
@@ -403,6 +404,30 @@ static int do_prepare(char *root_opts) {
     /* first try mounting procfs and fail if we can't */
     if (do_try("/proc", "proc", "proc", procsys_opts)) {
         return 1;
+    }
+    /* ensure a new enough kernel is used to avoid bugs and missing
+     * syscalls and whatever other issues that are likely to happen
+     */
+    utsname ubuf;
+    if (uname(&ubuf)) {
+        warn("could not get uname");
+        return 1;
+    }
+    char *ustr = ubuf.release;
+    char *uerr = nullptr;
+    auto umaj = std::strtoul(ustr, &uerr, 10);
+    if ((umaj < 5) || !uerr || (*uerr != '.')) {
+        warnx("kernels older than 5.x are not supported");
+        return 1;
+    }
+    if (umaj == 5) {
+        ustr = uerr + 1;
+        uerr = nullptr;
+        auto umin = std::strtoul(ustr, &uerr, 10);
+        if (umin < 10) {
+            warnx("kernels older than 5.10 are not supported");
+            return 1;
+        }
     }
     /* try remounting / with the params we want; this may fail depending on fs */
     do_remount("/", root_opts);
