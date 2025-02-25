@@ -199,6 +199,10 @@ static unsigned long parse_mntopts(
         }
         /* not recognized or manually handled */
         if (!optv) {
+            /* skip stuff that is not to be passed */
+            if (((optn[0] == 'X') || (optn[0] == 'x')) && (optn[1] == '-')) {
+                continue;
+            }
             if (!std::strcmp(optn, "defaults")) {
                 /* this resets some of the flags */
                 flags &= ~(MS_RDONLY|MS_NOSUID|MS_NODEV|MS_NOEXEC|MS_SYNCHRONOUS);
