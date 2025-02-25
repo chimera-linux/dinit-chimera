@@ -36,13 +36,16 @@
 #include <cstring>
 #include <string>
 #include <mntent.h>
+#include <dirent.h>
 #include <err.h>
+#include <fcntl.h>
 #include <grp.h>
 #include <unistd.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/utsname.h>
+#include <linux/loop.h>
 
 /* fallback; not accurate but good enough for early boot */
 static int mntpt_noproc(char const *inpath, struct stat *st) {
@@ -166,7 +169,9 @@ static mntopt known_opts[] = {
 };
 
 static unsigned long parse_mntopts(
-    char *opts, unsigned long flags, std::string &eopts
+    char *opts, unsigned long flags, std::string &eopts,
+    std::string *loopdev = nullptr, std::string *offset = nullptr,
+    std::string *sizelimit = nullptr
 ) {
     if (!opts) {
         return flags;
@@ -192,13 +197,30 @@ static unsigned long parse_mntopts(
                 break;
             }
         }
-        if (!optv && !std::strcmp(optn, "defaults")) {
-            /* this resets some of the flags */
-            flags &= ~(MS_RDONLY|MS_NOSUID|MS_NODEV|MS_NOEXEC|MS_SYNCHRONOUS);
-            continue;
-        }
-        /* not recognized... */
+        /* not recognized or manually handled */
         if (!optv) {
+            if (!std::strcmp(optn, "defaults")) {
+                /* this resets some of the flags */
+                flags &= ~(MS_RDONLY|MS_NOSUID|MS_NODEV|MS_NOEXEC|MS_SYNCHRONOUS);
+                continue;
+            }
+            if (loopdev) {
+                if (!std::strncmp(optn, "loop", 4) && ((optn[4] == '=') || !optn[4])) {
+                    *loopdev = optn;
+                    continue;
+                }
+                auto *eq = std::strchr(optn, '=');
+                if (eq) {
+                    /* maybe params */
+                    if (!std::strncmp(optn, "offset", eq - optn)) {
+                        *offset = eq + 1;
+                        continue;
+                    } else if (!std::strncmp(optn, "sizelimit", eq - optn)) {
+                        *sizelimit = eq + 1;
+                        continue;
+                    }
+                }
+            }
             if (!eopts.empty()) {
                 eopts.push_back(',');
             }
@@ -326,12 +348,243 @@ static int do_mount_raw(
     return 0;
 }
 
+static bool loop_match(
+    int fd, struct stat const &fst, uint64_t offset, uint64_t sizelimit,
+    unsigned long &flags
+) {
+    loop_info64 linf;
+    if (fd <= 0) {
+        return false;
+    }
+    if (ioctl(fd, LOOP_GET_STATUS64, &linf)) {
+        return false;
+    }
+    if (
+        (linf.lo_device == fst.st_dev) &&
+        (linf.lo_inode == fst.st_ino) &&
+        (linf.lo_offset == offset) &&
+        (linf.lo_sizelimit == sizelimit)
+    ) {
+        if (linf.lo_flags & LO_FLAGS_READ_ONLY) {
+            flags |= MS_RDONLY;
+        }
+        return true;
+    }
+    return false;
+}
+
+static int open_loop(
+    int mode, struct stat const &fst, uint64_t offset,
+    uint64_t sizelimit, std::string &src, bool &configure,
+    unsigned long &flags
+) {
+    char dbuf[64];
+
+    /* first open /dev as a base point for everything */
+    auto dfd = open("/dev", O_DIRECTORY | O_RDONLY);
+    if (dfd < 0) {
+        warn("could not open /dev");
+        return -1;
+    }
+    /* internal version for fdopendir */
+    auto dfdd = dup(dfd);
+    if (dfdd < 0) {
+        warn("could not dup /dev fd");
+        close(dfd);
+        return -1;
+    }
+    /* now open it for looping... */
+    auto *dr = fdopendir(dfdd);
+    if (!dr) {
+        warn("could not fdopendir /dev");
+        close(dfd);
+        return -1;
+    }
+    /* then try finding a loop device that is preconfigured with
+     * the params we need, and if we find one, just use it
+     */
+    for (;;) {
+        errno = 0;
+        auto *dp = readdir(dr);
+        if (!dp) {
+            if (errno == 0) {
+                closedir(dr);
+                break;
+            }
+            warn("could not read from /dev");
+            close(dfd);
+            closedir(dr);
+            return -1;
+        }
+        if (std::strncmp(dp->d_name, "loop", 4)) {
+            /* irrelevant */
+            continue;
+        }
+        if (!std::strcmp(dp->d_name, "loop-control")) {
+            /* also not */
+            continue;
+        }
+        /* potential loopdev */
+        auto lfd = openat(dfd, dp->d_name, mode);
+        if (loop_match(lfd, fst, offset, sizelimit, flags)) {
+            std::snprintf(dbuf, sizeof(dbuf), "/dev/%s", dp->d_name);
+            src = dbuf;
+            configure = false;
+            closedir(dr);
+            close(dfd);
+            return lfd;
+        }
+        close(lfd);
+    }
+    /* did not find a preconfigured one, so grab a free one */
+    auto cfd = openat(dfd, "loop-control", O_RDWR);
+    if (cfd < 0) {
+        warn("could not open /dev/loop-control");
+        close(dfd);
+        return -1;
+    }
+    auto rv = ioctl(cfd, LOOP_CTL_GET_FREE, 0);
+    if (rv < 0) {
+        warn("could not find a free loop device");
+        close(cfd);
+        close(dfd);
+        return -1;
+    }
+    close(cfd);
+    std::snprintf(dbuf, sizeof(dbuf), "/dev/loop%d", rv);
+    /* try opening with the wanted mode */
+    src = dbuf;
+    auto ret = openat(dfd, &dbuf[5], mode);
+    close(dfd);
+    return ret;
+}
+
+static int setup_loop(
+    std::string const &loopdev, std::string const &offsetp,
+    std::string const &sizelimitp, std::string &src, int &afd,
+    unsigned long &flags
+) {
+    char const *lsrc = loopdev.data();
+    auto *eq = std::strchr(lsrc, '=');
+    /* loop file descriptor and source file descriptor */
+    int lfd = -1, ffd = -1;
+    /* parse the options */
+    uint64_t sizelimit = 0, offset = 0;
+    if (!offsetp.empty()) {
+        char *errp = nullptr;
+        offset = std::strtoull(offsetp.data(), &errp, 10);
+        if (!errp || *errp) {
+            warnx("failed to parse loop offset");
+            return -1;
+        }
+    }
+    if (!sizelimitp.empty()) {
+        char *errp = nullptr;
+        sizelimit = std::strtoull(sizelimitp.data(), &errp, 10);
+        if (!errp || *errp) {
+            warnx("failed to parse loop sizelimit");
+            return -1;
+        }
+    }
+    /* open the source file first... */
+    int lmode = (flags & MS_RDONLY) ? O_RDONLY : O_RDWR;
+    ffd = open(src.data(), lmode);
+    /* try readonly as a fallback */
+    if (ffd < 0 && (lmode != O_RDONLY) && (errno == EROFS)) {
+        lmode = O_RDONLY;
+        flags |= MS_RDONLY;
+        ffd = open(src.data(), lmode);
+    }
+    if (ffd < 0) {
+        warn("failed to open source file");
+        return -1;
+    }
+    /* stat it for later checking */
+    struct stat fst;
+    if (fstat(ffd, &fst)) {
+        warn("failed to stat source file");
+        close(ffd);
+        return -1;
+    }
+    /* pre-create a loop configuration */
+    struct loop_config loopc;
+    std::memset(&loopc, 0, sizeof(loopc));
+    loopc.fd = ffd;
+    loopc.info.lo_offset = offset;
+    loopc.info.lo_sizelimit = sizelimit;
+    loopc.info.lo_flags = LO_FLAGS_AUTOCLEAR | (
+        (lmode == O_RDONLY) ? LO_FLAGS_READ_ONLY : 0
+    );
+    if (src.size() >= LO_NAME_SIZE) {
+        std::memcpy(loopc.info.lo_file_name, src.data(), LO_NAME_SIZE - 1);
+    } else {
+        std::memcpy(loopc.info.lo_file_name, src.data(), src.size());
+    }
+    /* now see if we have to configure at all */
+    bool configure = true;
+    if (!eq || !eq[1]) {
+        /* find unused loop device, or a preconfigured one */
+        lfd = open_loop(lmode, fst, offset, sizelimit, src, configure, flags);
+    } else {
+        lfd = open(eq + 1, lmode);
+        if (loop_match(lfd, fst, offset, sizelimit, flags)) {
+            configure = false;
+        }
+        src = eq + 1;
+    }
+    if (lfd < 0) {
+        warn("failed to open loop device");
+        close(ffd);
+        return -1;
+    }
+    /* if the loop is preconfigured, we're good; src was already set */
+    if (!configure) {
+        return 0;
+    }
+    /* finally configure */
+    if (ioctl(lfd, LOOP_CONFIGURE, &loopc)) {
+        warn("failed to configure the loop device");
+        close(ffd);
+        close(lfd);
+        return -1;
+    }
+    close(ffd);
+    afd = lfd;
+    return 0;
+}
+
 static int do_mount(
     char const *tgt, char const *src, char const *fstype, char *opts
 ) {
     std::string eopts{};
-    unsigned long flags = parse_mntopts(opts, MS_SILENT, eopts);
-    return do_mount_raw(tgt, src, fstype, flags, eopts);
+    /* potential loop device */
+    std::string asrc = src;
+    std::string loopdev{};
+    /* parameters for loop */
+    std::string offset{};
+    std::string sizelimit{};
+    /* do the initial parse pass */
+    unsigned long flags = parse_mntopts(
+        opts, MS_SILENT, eopts, &loopdev, &offset, &sizelimit
+    );
+    /* if loop was requested, set it up */
+    int afd = -1;
+    auto oflags = flags;
+    if (!loopdev.empty()) {
+        auto ret = setup_loop(loopdev, offset, sizelimit, asrc, afd, flags);
+        if (ret < 0) {
+            return ret;
+        }
+        if (!(oflags & MS_RDONLY) && (flags & MS_RDONLY)) {
+            warnx("Source file write-protected, mounting read-only.");
+        }
+    } else {
+        asrc = src;
+    }
+    auto ret = do_mount_raw(tgt, asrc.data(), fstype, flags, eopts);
+    /* close after mount is done so it does not autodestroy */
+    close(afd);
+    return ret;
 }
 
 static int do_try(
