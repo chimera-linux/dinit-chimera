@@ -35,11 +35,14 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <vector>
 #include <mntent.h>
 #include <dirent.h>
 #include <err.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <grp.h>
+#include <poll.h>
 #include <unistd.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
@@ -500,7 +503,7 @@ static int setup_loop(
         ffd = open(src.data(), lmode);
     }
     if (ffd < 0) {
-        warn("failed to open source file");
+        warn("failed to open source file '%s'", src.data());
         return -1;
     }
     /* stat it for later checking */
@@ -543,6 +546,7 @@ static int setup_loop(
     }
     /* if the loop is preconfigured, we're good; src was already set */
     if (!configure) {
+        afd = lfd;
         return 0;
     }
     /* finally configure */
@@ -557,37 +561,49 @@ static int setup_loop(
     return 0;
 }
 
-static int do_mount(
-    char const *tgt, char const *src, char const *fstype, char *opts
+static int setup_src(
+    char const *src, char *opts, unsigned long &flags,
+    std::string &asrc, std::string &eopts
 ) {
-    std::string eopts{};
     /* potential loop device */
-    std::string asrc = src;
     std::string loopdev{};
     /* parameters for loop */
     std::string offset{};
     std::string sizelimit{};
     /* do the initial parse pass */
-    unsigned long flags = parse_mntopts(
-        opts, MS_SILENT, eopts, &loopdev, &offset, &sizelimit
-    );
+    flags = parse_mntopts(opts, MS_SILENT, eopts, &loopdev, &offset, &sizelimit);
     /* if loop was requested, set it up */
     int afd = -1;
     auto oflags = flags;
-    if (!loopdev.empty()) {
-        auto ret = setup_loop(loopdev, offset, sizelimit, asrc, afd, flags);
-        if (ret < 0) {
-            return ret;
-        }
-        if (!(oflags & MS_RDONLY) && (flags & MS_RDONLY)) {
-            warnx("Source file write-protected, mounting read-only.");
-        }
-    } else {
-        asrc = src;
+    asrc = src;
+    if (loopdev.empty()) {
+        return 0;
+    }
+    auto ret = setup_loop(loopdev, offset, sizelimit, asrc, afd, flags);
+    if (ret < 0) {
+        return ret;
+    }
+    if (!(oflags & MS_RDONLY) && (flags & MS_RDONLY)) {
+        warnx("Source file write-protected, mounting read-only.");
+    }
+    return afd;
+}
+
+static int do_mount(
+    char const *tgt, char const *src, char const *fstype, char *opts
+) {
+    std::string asrc{};
+    std::string eopts{};
+    unsigned long flags;
+    auto afd = setup_src(src, opts, flags, asrc, eopts);
+    if (afd < 0) {
+        return 1;
     }
     auto ret = do_mount_raw(tgt, asrc.data(), fstype, flags, eopts);
     /* close after mount is done so it does not autodestroy */
-    close(afd);
+    if (afd > 0) {
+        close(afd);
+    }
     return ret;
 }
 
@@ -827,6 +843,255 @@ static int do_getent(char const *tab, const char *mntpt, char const *ent) {
     return 0;
 }
 
+static struct option lopts[] = {
+    {"from", required_argument, 0, 's'},
+    {"to", required_argument, 0, 'm'},
+    {"type", required_argument, 0, 't'},
+    {"options", required_argument, 0, 'o'},
+    {nullptr, 0, 0, 0}
+};
+
+static char *unesc_mnt(char *beg) {
+    char *dest = beg;
+    char const *src = beg;
+    while (*src) {
+        char const *val;
+        unsigned char cv = '\0';
+        /* not escape */
+        if (*src != '\\') {
+            *dest++ = *src++;
+            continue;
+        }
+        /* double slash */
+        if (src[1] == '\\') {
+            ++src;
+            *dest++ = *src++;
+            continue;
+        }
+        /* else unscape */
+        val = src + 1;
+        for (int i = 0; i < 3; ++i) {
+            if (*val >= '0' && *val <= '7') {
+                cv <<= 3;
+                cv += *val++ - '0';
+            } else {
+                break;
+            }
+        }
+        if (cv) {
+            *dest++ = cv;
+            src = val;
+        } else {
+            *dest++ = *src++;
+        }
+    }
+    *dest = '\0';
+    return beg;
+}
+
+static int is_mounted(
+    int mfd, char const *from, char const *to, std::vector<char> &data
+) {
+    auto off = lseek(mfd, 0, SEEK_SET);
+    if (off < 0) {
+        warn("failed to seek mounts");
+        return -1;
+    }
+    auto *buf = data.data();
+    auto cap = data.capacity();
+    auto rn = read(mfd, buf, cap);
+    if (rn < 0) {
+        warn("failed to read mounts");
+        return -1;
+    }
+    if (std::size_t(rn) == cap) {
+        /* double and try again from scratch to avoid races */
+        data.reserve(cap * 2);
+        return is_mounted(mfd, from, to, data);
+    }
+    /* terminate so we have a safe string */
+    buf[rn] = '\0';
+    /* now we have all the mounts; we can go over them line by line... */
+    for (;;) {
+        auto *p = std::strchr(buf, '\n');
+        if (p) {
+            *p = '\0';
+        }
+        /* now parse the current line... get just the source first */
+        auto sp = std::strchr(buf, ' ');
+        if (!sp) {
+            /* weird line? should not happen */
+            goto next;
+        }
+        *sp = '\0';
+        if (std::strcmp(buf, from)) {
+            /* unmatched source, so it's not this */
+            goto next;
+        }
+        buf = sp + 1;
+        /* matched source, now try dest */
+        sp = std::strchr(buf, ' ');
+        if (!sp) {
+            /* malformed line again */
+            goto next;
+        }
+        *sp = '\0';
+        /* unescape */
+        if (!std::strcmp(unesc_mnt(buf), to)) {
+            /* yay */
+            return 0;
+        }
+next:
+        if (!p) {
+            break;
+        }
+        buf = p + 1;
+    }
+    /* not mounted */
+    return 1;
+}
+
+static int sigpipe[2];
+
+static void sig_handler(int sign) {
+    write(sigpipe[1], &sign, sizeof(sign));
+}
+
+static int do_supervise(int argc, char **argv) {
+    char *from = nullptr, *to = nullptr, *type = nullptr, *options = nullptr;
+    for (;;) {
+        int idx = 0;
+        auto c = getopt_long(argc, argv, "", lopts, &idx);
+        if (c == -1) {
+            break;
+        }
+        switch (c) {
+            case 's':
+                from = optarg;
+                break;
+            case 'm':
+                to = optarg;
+                break;
+            case 't':
+                type = optarg;
+                break;
+            case 'o':
+                options = optarg;
+                break;
+            case '?':
+                return 1;
+            default:
+                warnx("unknown argument '%c'", c);
+                return 1;
+        }
+    }
+    if (optind < argc) {
+        warnx("supervise takes no positional arguments");
+        return 1;
+    }
+    if (!from || !to || !type) {
+        warnx("one of the following is missing: --from, --to, --type");
+        return 1;
+    }
+    /* set up termination signals */
+    struct sigaction sa{};
+    sa.sa_handler = sig_handler;
+    sa.sa_flags = SA_RESTART;
+    sigemptyset(&sa.sa_mask);
+    sigaction(SIGTERM, &sa, nullptr);
+    sigaction(SIGINT, &sa, nullptr);
+    /* we will be polling 2 descriptors; sigpipe and mounts */
+    pollfd pfd[2];
+    /* set up a selfpipe for signals */
+    if (pipe(sigpipe) < 0) {
+        warn("pipe failed");
+        return 1;
+    }
+    pfd[0].fd = sigpipe[0];
+    pfd[0].events = POLLIN;
+    pfd[0].revents = 0;
+    /* set up mounts for polling... */
+    int mfd = open("/proc/self/mounts", O_RDONLY);
+    if (mfd < 0) {
+        warn("could not open mounts");
+        return 1;
+    }
+    pfd[1].fd = mfd;
+    pfd[1].events = POLLPRI;
+    pfd[1].revents = 0;
+    /* prepare flags for mounting, figure out loopdev etc */
+    std::string asrc{};
+    std::string eopts{};
+    std::vector<char> mdata{};
+    unsigned long flags;
+    auto afd = setup_src(from, options, flags, asrc, eopts);
+    if (afd < 0) {
+        return 1;
+    }
+    /* reserve some sufficient buffer for mounts */
+    mdata.reserve(8192);
+    /* find if source is already mounted */
+    auto ism = is_mounted(mfd, asrc.data(), to, mdata);
+    if (ism > 0) {
+        if (do_mount_raw(to, asrc.data(), type, flags, eopts)) {
+            return 1;
+        }
+        /* a successful mount means that mounts did change and we
+         * should definitely receive at least one POLLPRI on the fd
+         */
+    } else if (ism < 0) {
+        return 1;
+    } else {
+        /* monitor the existing mount */
+    }
+    for (;;) {
+        auto pret = poll(pfd, 2, -1);
+        if (pret < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            warn("poll failed");
+            return 1;
+        }
+        if (pfd[0].revents & POLLIN) {
+            int sign;
+            if (read(pfd[0].fd, &sign, sizeof(sign)) != sizeof(sign)) {
+                warn("signal read failed");
+                return 1;
+            }
+            /* received a termination signal, so unmount and quit */
+            for (;;) {
+                ism = is_mounted(mfd, asrc.data(), to, mdata);
+                if (ism < 0) {
+                    return 1;
+                } else if (ism > 0) {
+                    return 0;
+                }
+                if (umount2(to, MNT_DETACH) < 0) {
+                    warn("umount failed");
+                    return 1;
+                }
+            }
+            // do unmount
+            return 0;
+        }
+        if (pfd[1].revents & POLLPRI) {
+            ism = is_mounted(mfd, asrc.data(), to, mdata);
+            if (ism > 0) {
+                /* mount disappeared, exit */
+                warnx("mount '%s' has vanished", to);
+                return 1;
+            } else if (ism < 0) {
+                return 1;
+            } else {
+                /* mount is ok... */
+                continue;
+            }
+        }
+    }
+    return 0;
+}
+
 int main(int argc, char **argv) {
     if (argc < 2) {
         errx(1, "not enough arguments");
@@ -837,6 +1102,8 @@ int main(int argc, char **argv) {
             errx(1, "incorrect number of arguments");
         }
         return do_is(argv[2]);
+    } else if (!std::strcmp(argv[1], "supervise")) {
+        return do_supervise(argc - 1, &argv[1]);
     } else if (!std::strcmp(argv[1], "prepare")) {
         if (argc != 3) {
             errx(1, "incorrect number of arguments");
