@@ -1176,6 +1176,14 @@ int main(void) {
             }
             if (fds[i].revents & POLLHUP) {
                 std::printf("devmon: term %d\n", fds[i].fd);
+                /* look up the connection so we can nuke it */
+                for (auto &cnc: conns) {
+                    if (cnc.fd == fds[i].fd) {
+                        nc = &cnc;
+                        break;
+                    }
+                }
+                /* now terminate */
                 goto bad_msg;
             }
             if (fds[i].revents & POLLIN) {
