@@ -1151,19 +1151,22 @@ int main(void) {
             break;
         }
 #endif
-        if (fds[++ni].revents) {
-            for (;;) {
-                auto nev = dinitctl_dispatch(dctl, 0, nullptr);
-                if (nev < 0) {
-                    if (errno == EINTR) {
-                        continue;
-                    }
-                    warn("dinitctl_dispatch failed");
-                    ret = 1;
-                    goto do_compact;
-                } else if (!nev) {
-                    break;
+        /* we don't check fd revents here; we need to dispatch anyway
+         * to send out any requests that may be in the write buffer
+         * from e.g. udev monitor events
+         */
+        ++ni; /* skip over the dinit fd */
+        for (;;) {
+            auto nev = dinitctl_dispatch(dctl, 0, nullptr);
+            if (nev < 0) {
+                if (errno == EINTR) {
+                    continue;
                 }
+                warn("dinitctl_dispatch failed");
+                ret = 1;
+                goto do_compact;
+            } else if (!nev) {
+                break;
             }
         }
         /* handle connections */
