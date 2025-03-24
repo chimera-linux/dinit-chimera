@@ -99,9 +99,10 @@ int main(int argc, char **argv) {
 
     /* handshake sequence */
     unsigned char wz[8 + sizeof(unsigned short)];
+    std::memset(wz, 0, sizeof(wz));
     wz[0] = 0xDD;
-    memcpy(&wz[1], type, std::strlen(type));
-    memcpy(&wz[8], &devlen, sizeof(devlen));
+    std::memcpy(&wz[1], type, std::strlen(type));
+    std::memcpy(&wz[8], &devlen, sizeof(devlen));
 
     if (connect(sock, reinterpret_cast<sockaddr const *>(&saddr), sizeof(saddr)) < 0) {
         err(1, "connect failed");
