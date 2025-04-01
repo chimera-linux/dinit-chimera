@@ -750,11 +750,11 @@ static int do_prepare(char *root_opts) {
         return 1;
     }
     if (do_try_maybe("/sys/firmware/efi/efivars", "efivarfs", "efivarfs", procsys_opts)) {
-        warn("could not mount /sys/kernel/security");
+        warn("could not mount /sys/firmware/efi/efivars");
         return 1;
     }
     if (do_try_maybe("/sys/fs/selinux", "selinuxfs", "selinuxfs", nullptr)) {
-        warn("could not mount /sys/kernel/security");
+        warn("could not mount /sys/fs/selinux");
         return 1;
     }
     /* success! */
