@@ -1014,7 +1014,7 @@ int main(void) {
     }
 
     struct udev_monitor *mon2 = udev_monitor_new_from_netlink(udev, "udev");
-    if (!mon1) {
+    if (!mon2) {
         std::fprintf(stderr, "could not create udev monitor\n");
         udev_monitor_unref(mon1);
         udev_unref(udev);
