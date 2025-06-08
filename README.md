@@ -184,7 +184,7 @@ on network interfaces, on MAC addresses, and on USB `vendor:product` strings;
 this is set by the argument provided to the `device` service.
 
 For devices, it just looks like `/dev/foo`, for `/sys` paths it's a long native
-path like `/sys/devices/...`, for network interfaces it's `ifname:foo`, for MAC
+path like `/sys/devices/...`, for network interfaces it's `netif:foo`, for MAC
 addresses it's `mac:foo` (the address must be in lowercase format), for USB
 IDs it's `usb:vendor:product` with lowercase hex (e.g. `usb:1d6b:0003`).
 
