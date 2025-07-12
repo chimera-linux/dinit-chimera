@@ -1,7 +1,8 @@
 # device monitor; it facilitates device dependencies
 
 type = process
-command = @SCRIPT_PATH@/devmon.sh
+command = @SCRIPT_PATH@/devmon.sh 4
 smooth-recovery = yes
+ready-notification = pipefd:4
 depends-on: early-devd
 depends-ms: early-dev-settle

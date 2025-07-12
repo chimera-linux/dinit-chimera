@@ -883,7 +883,20 @@ static bool resolve_device(struct udev_monitor *mon, bool tagged) {
 }
 #endif
 
-int main(void) {
+int main(int argc, char **argv) {
+    if (argc > 2) {
+        errx(1, "usage: %s [fd]", argv[0]);
+    }
+
+    int fdnum = -1;
+    if (argc > 1) {
+        fdnum = atoi(argv[1]);
+        errno = 0;
+        if (!fdnum || (fcntl(fdnum, F_GETFD) < 0)) {
+            errx(1, "invalid file descriptor for readiness (%d)", fdnum);
+        }
+    }
+
     /* simple signal handler for SIGTERM/SIGINT */
     {
         struct sigaction sa{};
@@ -925,6 +938,13 @@ int main(void) {
 
     fds.reserve(16);
     conns.reserve(16);
+
+    /* readiness as soon as we're bound to a socket */
+    if (fdnum > 0) {
+        std::printf("devmon: readiness notification\n");
+        write(fdnum, "READY=1\n", sizeof("READY=1"));
+        close(fdnum);
+    }
 
     std::printf("devmon: init dinit\n");
     /* set up dinit control connection */

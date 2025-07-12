@@ -35,6 +35,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 
 #include <err.h>
 #include <fcntl.h>
@@ -104,8 +105,32 @@ int main(int argc, char **argv) {
     std::memcpy(&wz[1], type, std::strlen(type));
     std::memcpy(&wz[8], &devlen, sizeof(devlen));
 
-    if (connect(sock, reinterpret_cast<sockaddr const *>(&saddr), sizeof(saddr)) < 0) {
-        err(1, "connect failed");
+    for (;;) {
+        if (!connect(sock, reinterpret_cast<sockaddr const *>(&saddr), sizeof(saddr))) {
+            break;
+        }
+        switch (errno) {
+            case EINTR:
+                continue;
+            case ENOENT:
+                /* socket is not yet present... */
+                break;
+            case ENOTDIR:
+                /* paths are not yet set up correctly */
+                break;
+            case ECONNREFUSED:
+                /* socket is not yet listening, is a leftover, etc. */
+                break;
+            default:
+                /* any other case, fail */
+                err(1, "connect failed");
+                break;
+        }
+        /* wait 250ms until next attempt */
+        struct timespec ts;
+        ts.tv_sec = 0;
+        ts.tv_nsec = 250 * 1000000;
+        nanosleep(&ts, nullptr);
     }
     std::printf("connected to devmon...\n");
 
