@@ -66,6 +66,10 @@ static void usage(FILE *f) {
 
 static std::string zram_size{};
 static std::string zram_algo{};
+static std::string zram_algo_params{};
+static std::string zram_mem_limit{};
+static std::string zram_backing_dev{};
+static std::string zram_writeback_limit{};
 static std::string zram_fmt = "mkswap -U clear %0";
 
 static bool write_param(
@@ -247,14 +251,48 @@ err_case:
         return 1;
     }
     /* set the algorithm if we have it, need that first */
-    if (zram_algo.size() && !write_param(
-        zfd, zdev, "comp_algorithm", zram_algo.data()
-    )) {
-        close(zfd);
-        return 1;
+    if (zram_algo.size()) {
+        if (!write_param(zfd, zdev, "comp_algorithm", zram_algo.data())) {
+            close(zfd);
+            return 1;
+        }
+        if (zram_algo_params.size() && !write_param(
+            zfd, zdev, "algorithm_params", zram_algo_params.data()
+        )) {
+            close(zfd);
+            return 1;
+        }
+    }
+    /* set the writeback device if expected */
+    if (zram_backing_dev.size()) {
+        if (!write_param(
+            zfd, zdev, "backing_dev", zram_backing_dev.data()
+        )) {
+            close(zfd);
+            return 1;
+        }
+        if (zram_writeback_limit.size()) {
+            if (!write_param(zfd, zdev, "writeback_limit_enable", "1")) {
+                close(zfd);
+                return 1;
+            }
+            if (!write_param(
+                zfd, zdev, "writeback_limit", zram_writeback_limit.data()
+            )) {
+                close(zfd);
+                return 1;
+            }
+        }
     }
     /* set the size */
     if (!write_param(zfd, zdev, "disksize", zram_size.data())) {
+        close(zfd);
+        return 1;
+    }
+    /* set the mem limit */
+    if (zram_mem_limit.size() && !write_param(
+        zfd, zdev, "mem_limit", zram_mem_limit.data()
+    )) {
         close(zfd);
         return 1;
     }
@@ -354,8 +392,71 @@ static bool load_conf(
             zram_size = value;
         } else if (!std::strcmp(key, "algorithm")) {
             zram_algo = value;
+            /* parse the parameters */
+            char *algop = zram_algo.data();
+            auto *paren = std::strchr(algop, '(');
+            if (paren) {
+                char *endp = std::strchr(paren + 1, ')');
+                if (!endp || endp[1]) {
+                    warnx("malformed algorithm value '%s'", zram_algo.data());
+                    return false;
+                }
+                char *pbeg = paren + 1;
+                while ((paren != algop) && std::isspace(*(paren - 1))) {
+                    --paren;
+                }
+                *paren = '\0';
+                /* just in case the contents of parens are all spaces */
+                while ((pbeg != endp) && std::isspace(*pbeg)) {
+                    ++pbeg;
+                }
+                /* terminate at ) */
+                *endp = '\0';
+                /* now algop is just algorithm name, write it into params */
+                if (pbeg != endp) {
+                    zram_algo_params += "algo=";
+                    zram_algo_params += algop;
+                    for (;;) {
+                        /* strip leading spaces */
+                        while (std::isspace(*pbeg)) {
+                            ++pbeg;
+                        }
+                        auto *cpend = std::strchr(pbeg, ',');
+                        char *comma = nullptr;
+                        if (cpend) {
+                            comma = cpend + 1;
+                            *cpend = '\0';
+                        } else {
+                            cpend = endp;
+                        }
+                        /* strip trailing spaces */
+                        while ((cpend != pbeg) && std::isspace(*(cpend - 1))) {
+                            --cpend;
+                        }
+                        *cpend = '\0';
+                        if (pbeg == cpend) {
+                            warnx("algorithm parameter must not be empty");
+                            return false;
+                        }
+                        zram_algo_params.push_back(' ');
+                        zram_algo_params += pbeg;
+                        if (!comma) {
+                            break;
+                        }
+                        pbeg = comma;
+                    }
+                }
+                /* finally shrink the algorithm name just in case */
+                zram_algo.resize(paren - algop);
+            }
         } else if (!std::strcmp(key, "format")) {
             zram_fmt = value;
+        } else if (!std::strcmp(key, "mem_limit")) {
+            zram_mem_limit = value;
+        } else if (!std::strcmp(key, "writeback_limit")) {
+            zram_writeback_limit = value;
+        } else if (!std::strcmp(key, "backing_dev")) {
+            zram_backing_dev = value;
         } else {
             warnx("unknown key '%s'", key);
             return false;
