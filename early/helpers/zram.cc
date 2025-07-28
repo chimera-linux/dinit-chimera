@@ -65,7 +65,6 @@ static void usage(FILE *f) {
 }
 
 static std::string zram_size{};
-static std::string zram_streams{};
 static std::string zram_algo{};
 static std::string zram_fmt = "mkswap -U clear %0";
 
@@ -254,13 +253,6 @@ err_case:
         close(zfd);
         return 1;
     }
-    /* stream count */
-    if (zram_streams.size() && !write_param(
-        zfd, zdev, "max_comp_streams", zram_streams.data()
-    )) {
-        close(zfd);
-        return 1;
-    }
     /* set the size */
     if (!write_param(zfd, zdev, "disksize", zram_size.data())) {
         close(zfd);
@@ -360,8 +352,6 @@ static bool load_conf(
         }
         if (!std::strcmp(key, "size")) {
             zram_size = value;
-        } else if (!std::strcmp(key, "streams")) {
-            zram_streams = value;
         } else if (!std::strcmp(key, "algorithm")) {
             zram_algo = value;
         } else if (!std::strcmp(key, "format")) {

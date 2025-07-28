@@ -259,7 +259,6 @@ The syntax is like this:
 [zram0]
 size = 4G
 algorithm = zstd
-streams = 8
 format = mkswap -U clear %0
 ```
 
