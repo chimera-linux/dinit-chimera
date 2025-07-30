@@ -576,6 +576,19 @@ static int setup_src(
     int afd = -1;
     auto oflags = flags;
     asrc = src;
+    /* resolve special syntax e.g. PARTLABEL=foo */
+#define RESOLVE_PFX(name, lname) \
+    if (!std::strncmp(asrc.data(), name "=", sizeof(name))) { \
+        std::string rsrc = "/dev/disk/by-" lname "/"; \
+        rsrc += asrc.data() + sizeof(name); \
+        asrc = std::move(rsrc); \
+    }
+    RESOLVE_PFX("LABEL", "label")
+    else RESOLVE_PFX("UUID", "uuid")
+    else RESOLVE_PFX("PARTLABEL", "partlabel")
+    else RESOLVE_PFX("PARTUUID", "partuuid")
+    else RESOLVE_PFX("ID", "id")
+    /* if no loop device, bail */
     if (loopdev.empty()) {
         return 0;
     }
