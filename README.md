@@ -275,6 +275,29 @@ for e.g. zram ramdisks with real filesystems on them.
 Once you have a configuration file, you can activate the device by enabling
 the `zram-device@zramN` service.
 
+## Mount services
+
+This suite supports mount services, which are service-driven supervised
+mounts. You can define a mount service like this:
+
+```
+# /etc/dinit.d/usb-stick.mount
+type = process
+command = $DINIT_MOUNT \
+    --from /dev/sda1 \
+    --to /media/usb \
+    --type ext4
+restart = false
+depends-on: device@/dev/sda1
+depends-on: early-fs-local.target
+```
+
+Starting this service will ensure that `/dev/sda1` will remain mounted for
+as long as the device exists. Stopping the service will cleanly unmount
+it. The `restart = false` ensures manually unmounting the device will not
+remount it; `restart = true` will make sure it's always mounted, unless
+stopped explicitly.
+
 ## Service targets
 
 The collection provides special "target" services, suffixed with `.target`,

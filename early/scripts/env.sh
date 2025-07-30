@@ -30,4 +30,7 @@ elif [ "$(cat /etc/machine-id)" = "uninitialized" ]; then
     dinitctl --use-passed-cfd setenv DINIT_FIRST_BOOT=1
 fi
 
+# mount service
+dinitctl --use-passed-cfd setenv "DINIT_MOUNT=@HELPER_PATH@/mnt-service"
+
 exit 0

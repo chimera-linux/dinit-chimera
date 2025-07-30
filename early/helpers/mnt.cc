@@ -1093,6 +1093,11 @@ static int do_supervise(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
+    char *rsl = std::strrchr(argv[0], '/');
+    if (rsl && !std::strcmp(rsl + 1, "mnt-service")) {
+        return do_supervise(argc, argv);
+    }
+
     if (argc < 2) {
         errx(1, "not enough arguments");
     }

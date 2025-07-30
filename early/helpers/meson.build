@@ -37,3 +37,5 @@ foreach helper: helpers
         install_dir: earlydir / 'helpers'
     )
 endforeach
+
+install_symlink('mnt-service', install_dir: earlydir / 'helpers', pointing_to: 'mnt')
