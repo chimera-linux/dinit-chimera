@@ -207,8 +207,8 @@ shut down if `/dev/sda1` disappears:
 ```
 type = process
 command = /usr/bin/foo
-depends-on = local.target
-depends-on = device@/dev/sda1
+depends-on: local.target
+depends-on: device@/dev/sda1
 ```
 
 This one will wait for a particular wireless interface but will not shut down
@@ -217,8 +217,8 @@ if it happens to disappear:
 ```
 type = process
 command = /usr/bin/foo
-depends-on = local.target
-depends-ms = device@netif:wlp170s0
+depends-on: local.target
+depends-ms: device@netif:wlp170s0
 ```
 
 It is also possible to create soft dependencies of the device services on
