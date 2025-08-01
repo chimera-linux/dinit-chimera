@@ -187,6 +187,8 @@ For devices, it just looks like `/dev/foo`, for `/sys` paths it's a long native
 path like `/sys/devices/...`, for network interfaces it's `netif:foo`, for MAC
 addresses it's `mac:foo` (the address must be in lowercase format), for USB
 IDs it's `usb:vendor:product` with lowercase hex (e.g. `usb:1d6b:0003`).
+Additionally, disk aliases are supported, e.g. `device@PARTLABEL=foo` is equal
+to `device@/dev/disk/by-partlabel/foo`.
 
 For non-USB devices, they may appear and disappear according to their syspath.
 For USB devices, which cannot be matched accurately by a syspath as you may have
@@ -284,11 +286,11 @@ mounts. You can define a mount service like this:
 # /etc/dinit.d/usb-stick.mount
 type = process
 command = $DINIT_MOUNT \
-    --from /dev/sda1 \
+    --from PARTLABEL=usbstick \
     --to /media/usb \
     --type ext4
 restart = false
-depends-on: device@/dev/sda1
+depends-on: device@PARTLABEL=usbstick
 depends-on: early-fs-local.target
 ```
 
