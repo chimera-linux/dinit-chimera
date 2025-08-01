@@ -17,7 +17,7 @@ if build_machine.kernel() == 'linux'
     helpers += [['zram', ['zram.cc'], [], []]]
 endif
 
-if libudev_dep.found() and dinitctl_dep.found() and not get_option('libudev').disabled()
+if libudev_dep.found() and not get_option('libudev').disabled()
     helpers += [
         [
             'devmon',
