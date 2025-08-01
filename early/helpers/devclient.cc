@@ -102,6 +102,7 @@ int main(int argc, char **argv) {
         ) {
             errx(1, "invalid device value");
         }
+        type = devn;
         devn = col + 1;
     }
 
