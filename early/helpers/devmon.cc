@@ -70,10 +70,6 @@
 
 #include <libdinitctl.h>
 
-#ifndef HAVE_UDEV
-#error Compiling devmon without udev
-#endif
-
 #ifdef HAVE_UDEV
 #include <libudev.h>
 
@@ -888,6 +884,22 @@ int main(int argc, char **argv) {
         errx(1, "usage: %s [fd]", argv[0]);
     }
 
+#ifdef HAVE_UDEV
+    bool dummy_mode = false;
+#else
+    bool dummy_mode = true;
+#endif
+    if (std::getenv("DINIT_DEVMON_DUMMY_MODE")) {
+        dummy_mode = true;
+    } else {
+        auto *cont = std::getenv("DINIT_CONTAINER");
+        if (cont && !std::strcmp(cont, "1")) {
+            dummy_mode = true;
+        } else if (!access("/run/dinit/container", R_OK)) {
+            dummy_mode = true;
+        }
+    }
+
     int fdnum = -1;
     if (argc > 1) {
         fdnum = atoi(argv[1]);
@@ -985,6 +997,13 @@ int main(int argc, char **argv) {
     }
 
 #ifdef HAVE_UDEV
+    struct udev_enumerate *en1, *en2;
+    struct udev_monitor *mon1, *mon2;
+
+    if (dummy_mode) {
+        goto udev_inited;
+    }
+
     std::printf("devmon: udev init\n");
     udev = udev_new();
     if (!udev) {
@@ -993,8 +1012,8 @@ int main(int argc, char **argv) {
     }
 
     /* prepopulate the mappings */
-    struct udev_enumerate *en1 = udev_enumerate_new(udev);
-    struct udev_enumerate *en2 = udev_enumerate_new(udev);
+    en1 = udev_enumerate_new(udev);
+    en2 = udev_enumerate_new(udev);
 
     if (!en1 || !en2) {
         std::fprintf(stderr, "could not create udev enumerate\n");
@@ -1026,14 +1045,14 @@ int main(int argc, char **argv) {
         }
     }
 
-    struct udev_monitor *mon1 = udev_monitor_new_from_netlink(udev, "udev");
+    mon1 = udev_monitor_new_from_netlink(udev, "udev");
     if (!mon1) {
         std::fprintf(stderr, "could not create udev monitor\n");
         udev_unref(udev);
         return 1;
     }
 
-    struct udev_monitor *mon2 = udev_monitor_new_from_netlink(udev, "udev");
+    mon2 = udev_monitor_new_from_netlink(udev, "udev");
     if (!mon2) {
         std::fprintf(stderr, "could not create udev monitor\n");
         udev_monitor_unref(mon1);
@@ -1101,6 +1120,7 @@ int main(int argc, char **argv) {
     }
 #endif
 
+udev_inited:
     /* dispatch pending dinit events */
     std::printf("devmon: drain dinit write queue\n");
     for (;;) {
@@ -1162,13 +1182,15 @@ int main(int argc, char **argv) {
         }
         /* check on udev */
 #ifdef HAVE_UDEV
-        if (fds[++ni].revents && !resolve_device(mon1, false)) {
-            ret = 1;
-            break;
-        }
-        if (fds[++ni].revents && !resolve_device(mon2, true)) {
-            ret = 1;
-            break;
+        if (!dummy_mode) {
+            if (fds[++ni].revents && !resolve_device(mon1, false)) {
+                ret = 1;
+                break;
+            }
+            if (fds[++ni].revents && !resolve_device(mon2, true)) {
+                ret = 1;
+                break;
+            }
         }
 #endif
         /* we don't check fd revents here; we need to dispatch anyway

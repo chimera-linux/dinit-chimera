@@ -26,6 +26,15 @@ if libudev_dep.found() and not get_option('libudev').disabled()
             ['-DHAVE_UDEV'] + devsock
         ]
     ]
+else
+    helpers += [
+        [
+            'devmon',
+            ['devmon.cc'],
+            [dinitctl_dep],
+            devsock
+        ]
+    ]
 endif
 
 foreach helper: helpers
