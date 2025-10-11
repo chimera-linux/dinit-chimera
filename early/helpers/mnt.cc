@@ -172,7 +172,7 @@ static mntopt known_opts[] = {
 };
 
 static unsigned long parse_mntopts(
-    char *opts, unsigned long flags, std::string &eopts,
+    char *opts, unsigned long flags, unsigned long &oflags, std::string &eopts,
     std::string *loopdev = nullptr, std::string *offset = nullptr,
     std::string *sizelimit = nullptr
 ) {
@@ -189,10 +189,13 @@ static unsigned long parse_mntopts(
             if (cmpv == 0) {
                 optv = &known_opts[i];
                 flags &= ~optv->flagmask;
+                oflags &= ~optv->flagmask;
                 if (optv->invert) {
                     flags &= ~optv->flagset;
+                    oflags &= ~optv->flagset;
                 } else {
                     flags |= optv->flagset;
+                    oflags |= optv->flagset;
                 }
                 break;
             } else if (cmpv < 0) {
@@ -209,6 +212,7 @@ static unsigned long parse_mntopts(
             if (!std::strcmp(optn, "defaults")) {
                 /* this resets some of the flags */
                 flags &= ~(MS_RDONLY|MS_NOSUID|MS_NODEV|MS_NOEXEC|MS_SYNCHRONOUS);
+                oflags &= ~(MS_RDONLY|MS_NOSUID|MS_NODEV|MS_NOEXEC|MS_SYNCHRONOUS);
                 continue;
             }
             if (loopdev) {
@@ -320,7 +324,8 @@ static int do_mount_helper(
 
 static int do_mount_raw(
     char const *tgt, char const *src, char const *fstype,
-    unsigned long flags, std::string &eopts, bool helper = false
+    unsigned long flags, unsigned long iflags, std::string &eopts,
+    bool helper = false
 ) {
     unsigned long pflags = flags;
     unsigned long pmask = MS_SHARED | MS_PRIVATE | MS_SLAVE | MS_UNBINDABLE;
@@ -331,7 +336,7 @@ static int do_mount_raw(
     }
     if (helper) {
         /* if false, helper may still be tried but *after* internal mount */
-        auto hret = do_mount_helper(tgt, src, fstype, flags, eopts);
+        auto hret = do_mount_helper(tgt, src, fstype, iflags, eopts);
         if (hret >= 0) {
             return hret;
         }
@@ -339,7 +344,7 @@ static int do_mount_raw(
     if (mount(src, tgt, fstype, flags, eopts.data()) < 0) {
         int serrno = errno;
         /* try a helper if regular mount fails */
-        int ret = do_mount_helper(tgt, src, fstype, flags, eopts);
+        int ret = do_mount_helper(tgt, src, fstype, iflags, eopts);
         if (ret < 0) {
             errno = serrno;
             warn("failed to mount filesystem '%s'", tgt);
@@ -562,7 +567,7 @@ static int setup_loop(
 }
 
 static int setup_src(
-    char const *src, char *opts, unsigned long &flags,
+    char const *src, char *opts, unsigned long &flags, unsigned long &iflags,
     std::string &asrc, std::string &eopts
 ) {
     /* potential loop device */
@@ -571,7 +576,10 @@ static int setup_src(
     std::string offset{};
     std::string sizelimit{};
     /* do the initial parse pass */
-    flags = parse_mntopts(opts, MS_SILENT, eopts, &loopdev, &offset, &sizelimit);
+    iflags = 0;
+    flags = parse_mntopts(
+        opts, MS_SILENT, iflags, eopts, &loopdev, &offset, &sizelimit
+    );
     /* if loop was requested, set it up */
     int afd = -1;
     auto oflags = flags;
@@ -597,6 +605,7 @@ static int setup_src(
         return ret;
     }
     if (!(oflags & MS_RDONLY) && (flags & MS_RDONLY)) {
+        iflags |= MS_RDONLY;
         warnx("Source file write-protected, mounting read-only.");
     }
     return afd;
@@ -608,11 +617,12 @@ static int do_mount(
     std::string asrc{};
     std::string eopts{};
     unsigned long flags;
-    auto afd = setup_src(src, opts, flags, asrc, eopts);
+    unsigned long iflags;
+    auto afd = setup_src(src, opts, flags, iflags, asrc, eopts);
     if (afd < 0) {
         return 1;
     }
-    auto ret = do_mount_raw(tgt, asrc.data(), fstype, flags, eopts);
+    auto ret = do_mount_raw(tgt, asrc.data(), fstype, flags, iflags, eopts);
     /* close after mount is done so it does not autodestroy */
     if (afd > 0) {
         close(afd);
@@ -643,6 +653,7 @@ static int do_try_maybe(
 
 static int do_remount(char const *tgt, char *opts) {
     unsigned long rmflags = MS_SILENT | MS_REMOUNT;
+    unsigned long iflags = 0;
     std::string mtab_eopts{};
     struct mntent *mn = nullptr;
     /* preserve existing params */
@@ -654,7 +665,7 @@ static int do_remount(char const *tgt, char *opts) {
     while ((mn = getmntent(sf))) {
         if (!strcmp(mn->mnt_dir, tgt)) {
             /* found root */
-            rmflags = parse_mntopts(mn->mnt_opts, rmflags, mtab_eopts);
+            rmflags = parse_mntopts(mn->mnt_opts, rmflags, iflags, mtab_eopts);
             break;
         } else {
             mn = nullptr;
@@ -665,9 +676,12 @@ static int do_remount(char const *tgt, char *opts) {
         warnx("could not locate '%s' mount", tgt);
         return 1;
     }
-    rmflags = parse_mntopts(opts, rmflags, mtab_eopts);
+    rmflags = parse_mntopts(opts, rmflags, iflags, mtab_eopts);
     /* and remount... */
-    if (do_mount_raw(mn->mnt_dir, mn->mnt_fsname, mn->mnt_type, rmflags, mtab_eopts)) {
+    if (do_mount_raw(
+        mn->mnt_dir, mn->mnt_fsname, mn->mnt_type, rmflags,
+        iflags | MS_REMOUNT, mtab_eopts
+    )) {
         return 1;
     }
     return 0;
@@ -779,6 +793,7 @@ static int do_root_rw() {
      * if not present, leave as-is except clear the rdonly flag
      */
     unsigned long rmflags = MS_SILENT | MS_REMOUNT;
+    unsigned long iflags = 0;
     std::string fstab_eopts{};
     struct mntent *mn = nullptr;
     /* look up requested root mount in fstab first */
@@ -787,7 +802,9 @@ static int do_root_rw() {
         while ((mn = getmntent(sf))) {
             if (!strcmp(mn->mnt_dir, "/")) {
                 /* found root */
-                rmflags = parse_mntopts(mn->mnt_opts, rmflags, fstab_eopts);
+                rmflags = parse_mntopts(
+                    mn->mnt_opts, rmflags, iflags, fstab_eopts
+                );
                 break;
             } else {
                 mn = nullptr;
@@ -808,13 +825,16 @@ static int do_root_rw() {
         while ((mn = getmntent(sf))) {
             if (!strcmp(mn->mnt_dir, "/")) {
                 /* found root */
-                rmflags = parse_mntopts(mn->mnt_opts, rmflags, fstab_eopts);
+                rmflags = parse_mntopts(
+                    mn->mnt_opts, rmflags, iflags, fstab_eopts
+                );
                 break;
             } else {
                 mn = nullptr;
             }
         }
         rmflags &= ~MS_RDONLY;
+        iflags &= ~MS_RDONLY;
         endmntent(sf);
     }
     if (!mn) {
@@ -822,7 +842,10 @@ static int do_root_rw() {
         return 1;
     }
     /* and remount... */
-    if (do_mount_raw(mn->mnt_dir, mn->mnt_fsname, mn->mnt_type, rmflags, fstab_eopts)) {
+    if (do_mount_raw(
+        mn->mnt_dir, mn->mnt_fsname, mn->mnt_type, rmflags,
+        iflags | MS_REMOUNT, fstab_eopts
+    )) {
         return 1;
     }
     return 0;
@@ -1037,7 +1060,8 @@ static int do_supervise(int argc, char **argv) {
     std::string eopts{};
     std::vector<char> mdata{};
     unsigned long flags;
-    auto afd = setup_src(from, options, flags, asrc, eopts);
+    unsigned long iflags;
+    auto afd = setup_src(from, options, flags, iflags, asrc, eopts);
     if (afd < 0) {
         return 1;
     }
@@ -1046,7 +1070,7 @@ static int do_supervise(int argc, char **argv) {
     /* find if source is already mounted */
     auto ism = is_mounted(mfd, asrc.data(), to, mdata);
     if (ism > 0) {
-        if (do_mount_raw(to, asrc.data(), type, flags, eopts)) {
+        if (do_mount_raw(to, asrc.data(), type, flags, iflags, eopts)) {
             return 1;
         }
         /* a successful mount means that mounts did change and we
