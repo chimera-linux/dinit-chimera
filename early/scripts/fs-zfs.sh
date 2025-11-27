@@ -10,6 +10,14 @@ DINIT_NO_CONTAINER=1
 command -v zfs > /dev/null 2>&1 || exit 0
 command -v zpool > /dev/null 2>&1 || exit 0
 
+if [ -r /proc/cmdline ]; then
+    for x in $(cat /proc/cmdline); do
+        case "$x" in
+            dinit_skip_volumes) exit 0 ;;
+        esac
+    done
+fi
+
 if [ -e /etc/zfs/zpool.cache ]; then
     zpool import -N -a -c /etc/zfs/zpool.cache || exit 0
 else

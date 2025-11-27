@@ -177,6 +177,9 @@ These only apply if the optional kdump service is installed.
   early root remount; the default is `ro,rshared` - this can be used to prevent
   read-only remount of the root filesystem, e.g. for debugging. Note that this
   variable makes it into the global activation environment.
+* `dinit_skip_volumes` skip ZFS pools, LVM, as well as btrfs scan on early
+  boot; particularly useful for e.g. live images, where doing this automatically
+  is counterproductive and may even break things (e.g. for root ZFS pools).
 
 ## Device dependencies
 
