@@ -33,15 +33,3 @@ option('default-path-env',
     value: '/sbin:/usr/sbin:/bin:/usr/bin',
     description: 'default PATH to use for init'
 )
-
-option('libudev',
-    type: 'feature',
-    value: 'auto',
-    description: 'whether to use libudev (for device monitoring)'
-)
-
-option('devmon-socket',
-    type: 'string',
-    value: '/run/dinit-devmon.sock',
-    description: 'the device monitor socket path'
-)

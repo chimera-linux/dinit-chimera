@@ -1,8 +1,7 @@
-devsock = ['-DDEVMON_SOCKET="' + get_option('devmon-socket') + '"']
-
 helpers = [
     ['binfmt',    ['binfmt.cc'], [], []],
-    ['devclient', ['devclient.cc'], [], [devsock]],
+    ['devclient', ['devclient.cc'], [], []],
+    ['devmon',    ['devmon.cc'], [], []],
     ['hwclock',   ['hwclock.cc'], [], []],
     ['swclock',   ['swclock.cc'], [], []],
     ['kmod',      ['kmod.cc'], [kmod_dep], []],
@@ -15,26 +14,6 @@ helpers = [
 
 if build_machine.kernel() == 'linux'
     helpers += [['zram', ['zram.cc'], [], []]]
-endif
-
-if libudev_dep.found() and not get_option('libudev').disabled()
-    helpers += [
-        [
-            'devmon',
-            ['devmon.cc'],
-            [dinitctl_dep, libudev_dep],
-            ['-DHAVE_UDEV'] + devsock
-        ]
-    ]
-else
-    helpers += [
-        [
-            'devmon',
-            ['devmon.cc'],
-            [dinitctl_dep],
-            devsock
-        ]
-    ]
 endif
 
 foreach helper: helpers

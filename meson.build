@@ -23,8 +23,6 @@ earlydir = srvdir / 'early'
 cpp = meson.get_compiler('cpp')
 
 kmod_dep = dependency('libkmod')
-libudev_dep = dependency('libudev', required: get_option('libudev'))
-dinitctl_dep = cpp.find_library('dinitctl', required: true)
 
 bless_boot_path = get_option('bless-boot-path')
 dinit_console_path = get_option('dinit-console-path')
