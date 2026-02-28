@@ -648,7 +648,18 @@ static int do_try_maybe(
     if (stat(tgt, &st) || !S_ISDIR(st.st_mode)) {
         return 0;
     }
-    return do_try(tgt, src, fstype, opts);
+    int ret = do_try(tgt, src, fstype, opts);
+    if (ret) {
+        switch (errno) {
+            case ENODEV:
+            case ENOTSUP:
+                /* filesystem type not known or supported */
+                return 0;
+            default:
+                break;
+        }
+    }
+    return ret;
 }
 
 static int do_remount(char const *tgt, char *opts) {
