@@ -697,6 +697,7 @@ static int do_umount(char const *tgt, char *opts) {
 
 static int do_prepare(char *root_opts) {
     char procsys_opts[] = "nosuid,noexec,nodev";
+    char procsys_ropts[] = "nosuid,noexec,nodev,ro";
     char dev_opts[] = "mode=0755,nosuid";
     char shm_opts[] = "mode=1777,nosuid,nodev";
     /* first set umask to an unrestricted value */
@@ -776,7 +777,7 @@ static int do_prepare(char *root_opts) {
         warn("could not mount /sys/kernel/security");
         return 1;
     }
-    if (do_try_maybe("/sys/firmware/efi/efivars", "efivarfs", "efivarfs", procsys_opts)) {
+    if (do_try_maybe("/sys/firmware/efi/efivars", "efivarfs", "efivarfs", procsys_ropts)) {
         warn("could not mount /sys/firmware/efi/efivars");
         return 1;
     }
