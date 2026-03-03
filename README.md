@@ -79,11 +79,12 @@ The `dinit-devd` may look like this when using `udev`:
 
 case "$1" in
     start) exec /usr/libexec/udevd --daemon ;;
-    stop) udevadm control -e || : ;;
-    settle) exec udevadm settle ;;
-    trigger) exec udevadm trigger --action=add ;;
+    stop) /usr/bin/udevadm control -e; exit 0 ;;
+    settle) exec /usr/bin/udevadm settle ;;
+    trigger) exec /usr/bin/udevadm trigger --action=add ;;
 esac
 
+echo "unknown action: $1"
 exit 1
 ```
 
