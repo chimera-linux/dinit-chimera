@@ -1217,7 +1217,12 @@ static int do_supervise(int argc, char **argv) {
 
 int main(int argc, char **argv) {
     char *rsl = std::strrchr(argv[0], '/');
-    if (rsl && !std::strcmp(rsl + 1, "dinit-mount-supervise")) {
+    if (!rsl) {
+        rsl = argv[0];
+    } else {
+        ++rsl;
+    }
+    if (rsl && !std::strcmp(rsl, "dinit-mount-supervise")) {
         return do_supervise(argc, argv);
     }
 
