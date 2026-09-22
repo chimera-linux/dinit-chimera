@@ -259,8 +259,10 @@ type = process
 command = /usr/bin/dinit-mount-supervise \
     --from PARTLABEL=usbstick \
     --to /media/usb \
-    --type ext4
+    --type ext4 \
+    --ready 4
 restart = false
+ready-notification = pipefd:4
 depends-on: device@PARTLABEL=usbstick
 depends-on: early-fs-local.target
 ```
@@ -270,6 +272,11 @@ as long as the device exists. Stopping the service will cleanly unmount
 it. The `restart = false` ensures manually unmounting the device will not
 remount it; `restart = true` will make sure it's always mounted, unless
 stopped explicitly.
+
+Readiness notification (so that the supervised mount can have reliable
+dependents) can be done either via the `pipefd` or `pipevar` mechanisms,
+with the argument to `--ready` determining that (number is for `pipefd`,
+while a name is for `pipevar`).
 
 ## Service targets
 

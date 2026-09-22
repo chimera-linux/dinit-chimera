@@ -926,6 +926,7 @@ static struct option lopts[] = {
     {"to", required_argument, 0, 'm'},
     {"type", required_argument, 0, 't'},
     {"options", required_argument, 0, 'o'},
+    {"ready", required_argument, 0, 'r'},
     {nullptr, 0, 0, 0}
 };
 
@@ -1036,7 +1037,8 @@ static void sig_handler(int sign) {
 }
 
 static int do_supervise(int argc, char **argv) {
-    char *from = nullptr, *to = nullptr, *type = nullptr, *options = nullptr;
+    char *from = nullptr, *to = nullptr, *type = nullptr,
+         *options = nullptr, *ready = nullptr;
     for (;;) {
         int idx = 0;
         auto c = getopt_long(argc, argv, "", lopts, &idx);
@@ -1056,6 +1058,9 @@ static int do_supervise(int argc, char **argv) {
             case 'o':
                 options = optarg;
                 break;
+            case 'r':
+                ready = optarg;
+                break;
             case '?':
                 return 1;
             default:
@@ -1070,6 +1075,40 @@ static int do_supervise(int argc, char **argv) {
     if (!from || !to || !type) {
         warnx("one of the following is missing: --from, --to, --type");
         return 1;
+    }
+    /* determine the readiness fd if necessary */
+    int ready_fd = -1;
+    if (ready) {
+        char *endp = nullptr;
+        long fdnum = strtoul(ready, &endp, 10);
+        if (!endp || *endp) {
+            /* maybe a name? */
+            char *envn = std::getenv(ready);
+            if (!envn || !*envn) {
+                warnx("environment variable '%s' for -r/--ready is empty or unset", ready);
+                return 1;
+            }
+            fdnum = strtoul(envn, &endp, 10);
+            if (!endp || *endp) {
+                warnx("environment variable '%s' for -r/--ready is not an integer", ready);
+                return 1;
+            }
+        }
+        /* number found */
+        if (fdnum <= STDERR_FILENO) {
+            warnx("file descriptor for -r/--ready must not overlap with stdio");
+            return 1;
+        }
+        if (fdnum > INT_MAX) {
+            warnx("file descriptor for -r/--ready is too high");
+            return 1;
+        }
+        ready_fd = int(fdnum);
+        if (fcntl(ready_fd, F_GETFD) < 0) {
+            warnx("file descriptor for -r/--ready is not open: %d", ready_fd);
+            return 1;
+        }
+        /* we have a valid ready_fd now */
     }
     /* set up termination signals */
     struct sigaction sa{};
@@ -1164,6 +1203,11 @@ static int do_supervise(int argc, char **argv) {
                 return 1;
             } else {
                 /* mount is ok... */
+                if (ready_fd > 0) {
+                    write(ready_fd, "READY=1\n", sizeof("READY=1"));
+                    close(ready_fd);
+                    ready_fd = -1;
+                }
                 continue;
             }
         }
