@@ -248,13 +248,15 @@ the `zram-device@zramN` service.
 
 ## Mount services
 
+**Note this is experimental and subject to changes.**
+
 This suite supports mount services, which are service-driven supervised
 mounts. You can define a mount service like this:
 
 ```
 # /etc/dinit.d/usb-stick.mount
 type = process
-command = $DINIT_MOUNT \
+command = /usr/bin/dinit-mount-supervise \
     --from PARTLABEL=usbstick \
     --to /media/usb \
     --type ext4

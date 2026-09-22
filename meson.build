@@ -14,6 +14,7 @@ project(
 
 pfx = get_option('prefix')
 lexecdir = get_option('libexecdir')
+bindir = get_option('bindir')
 sbindir = get_option('sbindir')
 dlibdir = get_option('libdir') / 'dinit'
 tmpfdir = get_option('libdir') / 'tmpfiles.d'

@@ -1,3 +1,5 @@
+fs = import('fs')
+
 helpers = [
     ['binfmt',    ['binfmt.cc'], [], []],
     ['devclient', ['devclient.cc'], [], []],
@@ -26,4 +28,8 @@ foreach helper: helpers
     )
 endforeach
 
-install_symlink('mnt-service', install_dir: earlydir / 'helpers', pointing_to: 'mnt')
+install_symlink(
+    'dinit-mount-supervise',
+    install_dir: bindir,
+    pointing_to: fs.relative_to(pfx / earlydir / 'helpers/mnt', pfx / bindir)
+)
