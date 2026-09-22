@@ -226,9 +226,12 @@ The syntax is like this:
 
 ```
 ; a comment
+set! ratio=`echo 2`
+set! ratio=2
+
 # also a comment
 [zram0]
-size = 4G
+size = (/ ram ratio)
 algorithm = zstd
 format = mkswap -U clear %0
 ```
@@ -237,11 +240,83 @@ Fields that are specified later override those that are specified earlier,
 so you can have e.g. a config file defining a zram device and then a later
 one defining more details for it.
 
+Directives (`set!`) may exist outside sections, and are accessible in variables
+taking byte values such as `size`. If value is given directly, it is considered
+an expression and is evaluated as is. If value is given in backticks, the
+contents are run in the shell, a single line of output is read, stripped of
+leading and trailing whitespace, and evaluated as an expression.
+
+Setting a variable multiple times will override it (it can access its former
+value).
+
+Several variables are builtin and cannot be redefined or overridden. These
+are `ram` (`MemTotal` from `/proc/meminfo` in bytes) and several constants
+(`pi`, `e`).
+
+There are also functions, which follow S-expression syntax like `(func args...)`.
+These are:
+
+```
++ v...
+- v...
+* v...
+/ v...
+% v...
+^ v...
+== v...
+!= v...
+< v...
+<= v...
+> v...
+>= v...
+&& v...
+|| v...
+? cond a b
+int v
+floor v
+ceil v
+round v
+abs v
+sign v
+min v...
+max v...
+sin v
+cos v
+tan v
+asin v
+acos v
+atan v
+sinh v
+cosh v
+tanh v
+asinh v
+acosh v
+atanh v
+log v base
+```
+
+The `v` means taking a single argument, while `v...` means any number of
+arguments. The `sin`, `cos`, `tan` functions take radians. The `log` function
+has an optional base, with the default of `e` (natural logarithm).
+
+Arithmetic and logical operator functions take any number of arguments and
+chain. The logical operators evaluate to one of the operands. The comparison
+operators evaluate to `1` or `0`. Everything works in terms of double precision
+floating point arithmetic.
+
+Numeric literals can take integer and decimal forms. Any form supported by
+`strtod` works, which means most formats supported by C should work.
+
+Memory suffixes are supported as 1024 multiples, with `K` for 1024,
+`M` for 1024^2, `G` for 1024^3, and `T` for 1024^4. SI suffixes
+are not supported.
+
 The above fields are currently the only supported ones (more will be added
-later as well as more syntax). All but `size` are optional. The `format`
-field specifies a command to use to format the device once set up and the
-default is the one above, to set up swap space. You can set custom commands
-for e.g. zram ramdisks with real filesystems on them.
+later as well as more syntax, and more exist but are considered unstable).
+All but `size` are optional. The `format` field specifies a command to use
+to format the device once set up and the default is the one above, to set up
+swap space. You can set custom commands for e.g. zram ramdisks with real
+filesystems on them.
 
 Once you have a configuration file, you can activate the device by enabling
 the `zram-device@zramN` service.

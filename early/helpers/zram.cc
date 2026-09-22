@@ -37,6 +37,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <algorithm>
+#include <functional>
 
 #include <err.h>
 #include <unistd.h>
@@ -64,13 +65,392 @@ static void usage(FILE *f) {
     );
 }
 
-static std::string zram_size{};
+std::unordered_map<std::string, double> zram_bvars;
+std::unordered_map<std::string, double> zram_vars;
+
+static unsigned long long zram_size = 0;
+static unsigned long long zram_mem_limit = 0;
+
 static std::string zram_algo{};
 static std::string zram_algo_params{};
-static std::string zram_mem_limit{};
 static std::string zram_backing_dev{};
 static std::string zram_writeback_limit{};
 static std::string zram_fmt = "mkswap -U clear %0";
+
+/* some minor string utilities */
+
+template<typename T>
+static void strip_lead(T &&str, std::size_t *len = nullptr) {
+    while ((!len || *len) && std::isspace(*str)) {
+        ++str;
+        if (len) {
+          --*len;
+        }
+    }
+}
+
+template<typename T>
+static void strip_lead(T &&str, char const *endp) {
+    while ((str != endp) && std::isspace(*str)) {
+        ++str;
+    }
+}
+
+static void strip_trail(char const *str, std::size_t &len) {
+    while (len && std::isspace(str[len - 1])) {
+        --len;
+    }
+}
+
+static std::size_t strip_trail(char *str) {
+    auto rl = std::strlen(str);
+    while (rl && std::isspace(str[rl - 1])) {
+        str[--rl] = '\0';
+    }
+    return rl;
+}
+
+/* helper stack for putting function arguments on */
+std::vector<double> sexp_argstack;
+
+struct f_nop {
+    double operator()(double arg) { return arg; }
+};
+
+#define F_BINOP(name, func) struct f_##name { \
+    double operator()(double a, double b) { return func(a, b); } \
+};
+
+F_BINOP(mod, std::fmod)
+F_BINOP(pow, std::pow)
+
+#define F_UNOP(name) {#name, [](double *args, std::size_t argn) { \
+    if (!argn) { \
+        return std::name(0.0); \
+    } \
+    return std::name(*args); \
+}}
+
+template<typename BOP, typename UOP>
+struct f_arith {
+    double operator()(double *args, std::size_t argn) {
+        switch (argn) {
+            case 0: return 0;
+            case 1: return UOP{}(*args);
+            default: break;
+        }
+        double ret = *args++;
+        auto op = BOP{};
+        while (--argn) {
+            ret = op(ret, *args++);
+        }
+        return ret;
+    }
+};
+
+template<typename OP>
+struct f_comp {
+    double operator()(double *args, std::size_t argn) {
+        if (!argn--) {
+            return 0;
+        }
+        auto op = OP{};
+        if (argn == 1) {
+            return double(op(*args, 0));
+        }
+        bool val = op(args[0], args[1]);
+        for (std::size_t i = 2; i < argn && val; ++i) {
+            val = op(args[i - 1], args[i]);
+        }
+        return double(val);
+    }
+};
+
+std::unordered_map<
+    std::string, std::function<double(double *, std::size_t)>
+> sexp_funcs = {
+    {"+", f_arith<std::plus<double>, f_nop>{}},
+    {"-", f_arith<std::minus<double>, std::negate<double>>{}},
+    {"*", f_arith<std::multiplies<double>, f_nop>{}},
+    {"/", f_arith<std::divides<double>, f_nop>{}},
+    {"%", f_arith<f_mod, f_nop>{}},
+    {"^", f_arith<f_pow, f_nop>{}},
+    {"==", f_comp<std::equal_to<double>>{}},
+    {"!=", f_comp<std::not_equal_to<double>>{}},
+    {">", f_comp<std::greater<double>>{}},
+    {">=", f_comp<std::greater_equal<double>>{}},
+    {"<", f_comp<std::less<double>>{}},
+    {"<=", f_comp<std::less_equal<double>>{}},
+    {"&&", [](double *args, std::size_t argn) {
+        if (!argn) {
+            return 1.0;
+        }
+        double ret;
+        for (std::size_t i = 0; i < argn; ++i) {
+            if (!args[i]) {
+                return args[i];
+            }
+            ret = args[i];
+        }
+        return ret;
+    }},
+    {"||", [](double *args, std::size_t argn) {
+        if (!argn) {
+            return 0.0;
+        }
+        double ret;
+        for (std::size_t i = 0; i < argn; ++i) {
+            if (args[i]) {
+                return args[i];
+            }
+            ret = args[i];
+        }
+        return ret;
+    }},
+    {"?", [](double *args, std::size_t argn) {
+        if (!argn) {
+            return 0.0;
+        }
+        if (args[0]) {
+            return ((argn > 1) ? args[1] : 0.0);
+        }
+        return ((argn > 2) ? args[2] : 0.0);
+    }},
+    {"min", [](double *args, std::size_t argn) {
+        if (!argn) {
+            return 0.0;
+        }
+        double ret = args[0];
+        for (std::size_t i = 1; i < argn; ++i) {
+            ret = std::min(ret, args[i]);
+        }
+        return ret;
+    }},
+    {"max", [](double *args, std::size_t argn) {
+        if (!argn) {
+            return 0.0;
+        }
+        double ret = args[0];
+        for (std::size_t i = 1; i < argn; ++i) {
+            ret = std::max(ret, args[i]);
+        }
+        return ret;
+    }},
+    {"sign", [](double *args, std::size_t argn) {
+        if (!argn) {
+            return 0.0;
+        }
+        return static_cast<double>((0.0 < *args) - (*args < 0.0));
+    }},
+    {"int", [](double *args, std::size_t argn) {
+        if (!argn) {
+            return 0.0;
+        }
+        return static_cast<double>(static_cast<long long>(*args));
+    }},
+    {"log", [](double *args, std::size_t argn) {
+        switch (argn) {
+            case 0:
+                return std::log(0.0);
+            case 1:
+                return std::log(*args);
+            default:
+                break;
+        }
+        return std::log(args[0]) / std::log(args[1]);
+    }},
+    F_UNOP(floor),
+    F_UNOP(ceil),
+    F_UNOP(round),
+    F_UNOP(abs),
+    F_UNOP(sin),
+    F_UNOP(cos),
+    F_UNOP(tan),
+    F_UNOP(asin),
+    F_UNOP(acos),
+    F_UNOP(atan),
+    F_UNOP(sinh),
+    F_UNOP(cosh),
+    F_UNOP(tanh),
+    F_UNOP(asinh),
+    F_UNOP(acosh),
+    F_UNOP(atanh),
+};
+
+/* Any suffficiently complicated C(++) program contains an ad-hoc,
+ * informally specified, bug-ridden, slow implementation of Lisp
+ *
+ * mainly i didn't feel like implementing a lexer or precedence climbing
+ *
+ * maybe stricter error handling later, for now it's very loose so it cannot
+ * reasonably fail, which may be okay enough for this kind of purpose
+ *
+ * nothing here terminates strings, so we manage the length carefully
+ */
+static double eval_exp(char const *&value, std::size_t &vlen) {
+    if (vlen == 0) {
+        warnx("got empty expression");
+        return 0;
+    }
+    /* start by checking what kind of expression we have
+     *
+     * it can be either a s-expression call, or a literal, or a variable */
+    if (*value == '(') {
+        /* strip the leading paren and spaces... */
+        ++value;
+        --vlen;
+        strip_lead(value, &vlen);
+        if (!vlen) {
+            warnx("found empty s-expression");
+            return 0;
+        }
+        /* locate the function only */
+        std::size_t wlen = 0;
+        char const *wbeg = value;
+        while (vlen && !std::isspace(*value) && (*value != ')')) {
+            ++wlen;
+            ++value;
+            --vlen;
+        }
+        std::string funcn{wbeg, wlen};
+        /* see if the function exists... */
+        bool nop = false;
+        auto it = sexp_funcs.find(funcn);
+        if (it == sexp_funcs.end()) {
+            warnx("unknown function '%s'", funcn.data());
+            /* we still need to parse the rest so don't fail now */
+            nop = true;
+        }
+        /* need at least one argument for valid code */
+        strip_lead(value, &vlen);
+        if (!vlen || (*value == ')')) {
+            warnx("function '%s' called without arguments", funcn.data());
+            if (vlen) {
+                ++value;
+                --vlen;
+                strip_lead(value, &vlen);
+            }
+            if (nop) {
+                return 0;
+            }
+            return it->second(nullptr, 0);
+        }
+        std::size_t oldn = sexp_argstack.size();
+        std::size_t argn = 0;
+        while (vlen && (*value != ')')) {
+            sexp_argstack.push_back(eval_exp(value, vlen));
+            ++argn;
+        }
+        /* call the thing */
+        double ret = 0;
+        if (!nop) {
+            ret = it->second(&sexp_argstack.data()[oldn], argn);
+        }
+        /* drop the args */
+        while (argn--) {
+            sexp_argstack.pop_back();
+        }
+        strip_lead(value, &vlen);
+        if (!vlen || (*value != ')')) {
+            /* just warn lol */
+            warnx("no matching ')' for '%s'", value);
+        } else {
+            /* strip the trailing ) */
+            ++value;
+            --vlen;
+        }
+        strip_lead(value, &vlen);
+        return ret;
+    }
+    /* variable access */
+    if (std::isalpha(*value) || (*value == '_')) {
+        /* fetch the word */
+        std::size_t wlen = 0;
+        for (std::size_t i = 0; i < vlen; ++i) {
+            if (!std::isalnum(value[i]) && (value[i] != '_')) {
+                if (std::isspace(value[i]) || (value[i] == ')')) {
+                    /* we reached somewhere outside */
+                    break;
+                }
+                warnx(
+                    "invalid character '%c' in variable '%.*s'",
+                    value[i], int(wlen), value
+                );
+            }
+            ++wlen;
+        }
+        std::string varn{value, wlen};
+        /* advance the stream */
+        value += wlen;
+        vlen -= wlen;
+        strip_lead(value, &vlen);
+        /* look up the var */
+        auto it = zram_vars.find(varn);
+        if (it == zram_vars.end()) {
+            warnx("undefined variable '%s'", varn.data());
+            return 0;
+        }
+        return it->second;
+    }
+    /* literal value */
+    char *endp = nullptr;
+    char const *valbeg = value;
+    double v = std::strtod(value, &endp);
+    /* parse failure? */
+    if (!endp || (endp == value)) {
+        warnx("invalid literal value '%c'", *value);
+        return v;
+    }
+    /* advance the stream */
+    vlen -= std::size_t(endp - value);
+    value = endp;
+    /* we parsed a number, see if there is a suffix */
+    if (vlen) {
+        unsigned long long mul = 1;
+        switch (*endp) {
+            case 'T':
+                mul *= 1024;
+            case 'G':
+                mul *= 1024;
+            case 'M':
+                mul *= 1024;
+            case 'K':
+                v *= (1024 * mul);
+                vlen -= 1;
+                value += 1;
+            default:
+                break;
+        }
+    }
+    /* garbage */
+    bool bad = false;
+    while (vlen && !std::isspace(*value) && (*value != ')')) {
+        ++value;
+        --vlen;
+        bad = true;
+    }
+    if (bad) {
+        warnx("invalid suffix in literal '%.*s'", int(value - valbeg), valbeg);
+    }
+    strip_lead(value, &vlen);
+    return v;
+}
+
+/* convenience, not used in the parser */
+static double eval_exp_var(char const *value, std::size_t vlen) {
+    strip_lead(value, &vlen);
+    auto ret = eval_exp(value, vlen);
+    if (vlen) {
+        warnx("trailing garbage after expression: '%s'", value);
+    }
+    return ret;
+}
+
+static unsigned long long eval_exp_int(char const *value) {
+    return static_cast<unsigned long long>(
+        eval_exp_var(value, std::strlen(value))
+    );
+}
 
 static bool write_param(
     int fd, char const *zdev, char const *file, char const *value
@@ -100,9 +480,7 @@ static int zram_format(char const *zdevn) {
     zdev += zdevn;
     char *data = zram_fmt.data();
     /* strip any spaces at the beginning */
-    while (std::isspace(*data)) {
-        ++data;
-    }
+    strip_lead(data);
     for (;;) {
         auto sp = std::strchr(data, ' ');
         if (sp) {
@@ -155,12 +533,12 @@ static int zram_format(char const *zdevn) {
 }
 
 static int setup_zram(char const *zdev, int znum) {
-    if (zram_size.empty()) {
+    if (!zram_size) {
         warnx("no size specified for '%s'", zdev);
         return 1;
     }
     std::printf(
-        "setting up device '%s' with size %s...\n", zdev, zram_size.data()
+        "setting up device '%s' with size %llu...\n", zdev, zram_size
     );
     auto dev_fd = open("/dev", O_DIRECTORY | O_PATH);
     if (dev_fd < 0) {
@@ -285,14 +663,15 @@ err_case:
         }
     }
     /* set the size */
-    if (!write_param(zfd, zdev, "disksize", zram_size.data())) {
+    char zsize[64];
+    std::snprintf(zsize, sizeof(zsize), "%llu", zram_size);
+    if (!write_param(zfd, zdev, "disksize", zsize)) {
         close(zfd);
         return 1;
     }
     /* set the mem limit */
-    if (zram_mem_limit.size() && !write_param(
-        zfd, zdev, "mem_limit", zram_mem_limit.data()
-    )) {
+    std::snprintf(zsize, sizeof(zsize), "%llu", zram_mem_limit);
+    if (zram_mem_limit && !write_param(zfd, zdev, "mem_limit", zsize)) {
         close(zfd);
         return 1;
     }
@@ -336,36 +715,140 @@ static bool load_conf(
         return false;
     }
     bool fret = true;
+    bool in_cursect = false;
     bool in_sect = false;
-    auto slen = std::strlen(zsect);
     for (ssize_t nread; (nread = getline(&line, &len, f)) != -1;) {
         /* strip leading whitespace and ignore comments, empty lines etc */
         char *cline = line;
-        while (std::isspace(*cline)) {
-            ++cline;
-        }
+        strip_lead(cline);
         if ((*cline == '#') || (*cline == ';') || !*cline) {
             continue;
         }
-        /* strip leading spaces */
-        while (std::isspace(*cline)) {
-            ++cline;
-        }
-        /* strip trailing spaces */
-        auto rl = std::strlen(line);
-        while (std::isspace(line[rl - 1])) {
-            line[--rl] = '\0';
-        }
+        auto rl = strip_trail(line);
         if (*cline == '[') {
-            in_sect = !std::strncmp(cline + 1, zsect, slen);
-            if ((cline[slen + 1] != ']') || cline[slen + 2]) {
+            /* make sure it's terminated */
+            if ((cline[rl - 1] != ']')) {
                 warnx("invalid syntax: '%s'", cline);
                 return false;
             }
+            in_sect = true; /* we are in *some* section */
+            /* the entire string inside has to match, so terminate at bracket */
+            cline[rl - 1] = '\0';
+            in_cursect = !std::strcmp(cline + 1, zsect);
             continue;
         }
-        /* skip sections not relevant to us */
+        /* outside of sections, we only need to handle directives */
         if (!in_sect) {
+            if (strncmp(cline, "set!", 4)) {
+                warnx("invalid syntax: '%s'", cline);
+                return false;
+            }
+            /* find the delimiter while the full line is intact */
+            auto *eq = std::strchr(cline, '=');
+            if (!eq) {
+                warnx("invalid syntax: '%s'", cline);
+                return false;
+            }
+            /* terminate at delimiter so we have just the name/value later */
+            *eq = '\0';
+            /* advance the set! */
+            cline += 4;
+            strip_lead(cline);
+            auto *varv = eq + 1;
+            strip_lead(varv);
+            auto vlen = strip_trail(varv);
+            /* variable names have to be [a-zA-Z_] */
+            if (!std::isalpha(*cline) && (*cline != '_')) {
+                warnx("invalid variable name: '%s'", cline);
+                return false;
+            }
+            /* validate the rest of the name, can be [a-zA-Z0-9_] */
+            for (auto *cl = cline + 1; *cl; ++cl) {
+                if (!std::isalnum(*cl) && (*cl != '_')) {
+                    warnx("invalid variable name: '%s'", cline);
+                    return false;
+                }
+            }
+            /* can't override builtins */
+            auto it = zram_bvars.find(cline);
+            if (it != zram_bvars.end()) {
+                warnx("attempt to override builtin variable '%s'", cline);
+                return false;
+            }
+            /* make sure value is non-empty */
+            if (!*varv) {
+                warnx("invalid value for variable '%s' (empty)", cline);
+                return false;
+            }
+            /* direct access without shell is pretty straightforward */
+            if (*varv != '`') {
+                zram_vars[cline] = eval_exp_var(varv, vlen);
+                continue;
+            }
+            /* here we make sure we trail with a '`' too and strip it */
+            ++varv;
+            strip_lead(varv);
+            vlen = std::strlen(varv);
+            if (!vlen || varv[vlen - 1] != '`') {
+                warnx(
+                    "invalid value for evaluated variable '%s' (missing trailing backtick)",
+                    cline
+                );
+                return false;
+            }
+            varv[--vlen] = '\0';
+            strip_trail(varv, vlen);
+            if (!vlen) {
+                warnx("invalid value for evaluated variable '%s' (empty command)", cline);
+                return false;
+            }
+            /* re-terminate the inner command */
+            varv[vlen] = '\0';
+            /* 100% safety guaranteed
+             *
+             * a single arbitrary length line is read
+             *
+             * only use with commands that won't block it :)
+             *
+             * maybe later we'll do more safe thing with pipes and timeout
+             */
+            auto *fp = popen(varv, "r");
+            if (!fp) {
+                warn("popen failed for %s=%s, using 0", cline, varv);
+                zram_vars[cline] = 0;
+                continue;
+            }
+            char *lptr = nullptr;
+            size_t lsize = 0;
+            auto llen = getline(&lptr, &lsize, fp);
+            if (llen < 0) {
+                warn("line read failed for %s=%s, using 0", cline, varv);
+                zram_vars[cline] = 0;
+                pclose(fp);
+                std::free(lptr);
+                continue;
+            }
+            pclose(fp);
+            /* get rid of any leading whitespace */
+            auto *valv = lptr;
+            strip_lead(valv);
+            strip_trail(valv, vlen);
+            if (!vlen) {
+                warnx("empty line received for %s=%s, using 0", cline, varv);
+                zram_vars[cline] = 0;
+                std::free(lptr);
+                continue;
+            }
+            /* re-terminate at length */
+            valv[vlen] = '\0';
+            /* eval as expression and store */
+            zram_vars[cline] = eval_exp_var(valv, vlen);
+            /* free and continue */
+            std::free(lptr);
+            continue;
+        }
+        /* if we're in a section but not ours, we don't care */
+        if (!in_cursect) {
             continue;
         }
         auto *eq = std::strchr(cline, '=');
@@ -381,15 +864,13 @@ static bool load_conf(
             *--eq = '\0';
         }
         /* strip spaces after assignment */
-        while (std::isspace(*value)) {
-            ++value;
-        }
+        strip_lead(value);
         if (!*value) {
             warnx("empty value for key '%s'", key);
             return false;
         }
         if (!std::strcmp(key, "size")) {
-            zram_size = value;
+            zram_size = eval_exp_int(value);
         } else if (!std::strcmp(key, "algorithm")) {
             zram_algo = value;
             /* parse the parameters */
@@ -407,9 +888,7 @@ static bool load_conf(
                 }
                 *paren = '\0';
                 /* just in case the contents of parens are all spaces */
-                while ((pbeg != endp) && std::isspace(*pbeg)) {
-                    ++pbeg;
-                }
+                strip_lead(pbeg, endp);
                 /* terminate at ) */
                 *endp = '\0';
                 /* now algop is just algorithm name, write it into params */
@@ -418,9 +897,7 @@ static bool load_conf(
                     zram_algo_params += algop;
                     for (;;) {
                         /* strip leading spaces */
-                        while (std::isspace(*pbeg)) {
-                            ++pbeg;
-                        }
+                        strip_lead(pbeg);
                         auto *cpend = std::strchr(pbeg, ',');
                         char *comma = nullptr;
                         if (cpend) {
@@ -452,7 +929,7 @@ static bool load_conf(
         } else if (!std::strcmp(key, "format")) {
             zram_fmt = value;
         } else if (!std::strcmp(key, "mem_limit")) {
-            zram_mem_limit = value;
+            zram_mem_limit = eval_exp_int(value);
         } else if (!std::strcmp(key, "writeback_limit")) {
             zram_writeback_limit = value;
         } else if (!std::strcmp(key, "backing_dev")) {
@@ -477,6 +954,9 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    /* use a minimal C locale to avoid strtod formatting issues */
+    setlocale(LC_NUMERIC, "C");
+
     char const *zramname = argv[1];
     if (std::strncmp(zramname, "zram", 4)) {
         warnx("incorrect device specified");
@@ -496,6 +976,42 @@ int main(int argc, char **argv) {
     if (stat("/sys/class/zram-control", &st)) {
         errx(1, "zram is not loaded");
     }
+
+    /* populate builtin vars */
+    zram_bvars["pi"] = M_PI;
+    zram_bvars["e"] = M_E;
+
+    /* get total ram with a single read, linux ofc makes it a pain in the ass */
+    char mbuf[1024] = {};
+    int minfo = open("/proc/meminfo", O_RDONLY);
+    if (minfo < 0) {
+        err(1, "could not open /proc/meminfo");
+    }
+    auto n = read(minfo, mbuf, sizeof(mbuf) - 1);
+    if (n < 0) {
+        err(1, "could not read /proc/meminfo");
+    }
+    if (std::strncmp(mbuf, "MemTotal:", sizeof("MemTotal:") - 1)) {
+        errx(1, "malformed /proc/meminfo read (no MemTotal)");
+    }
+    char *mt = mbuf + sizeof("MemTotal");
+    strip_lead(mt);
+    char *endp = nullptr;
+    unsigned long long mtv = std::strtoull(mt, &endp, 10);
+    if (!endp || !std::isspace(*endp)) {
+        errx(1, "malformed /proc/meminfo read (invalid MemTotal format)");
+    }
+    strip_lead(endp);
+    if (std::strncmp(endp, "kB\n", 3)) {
+        errx(1, "malformed /proc/meminfo read (MemTotal not in kB)");
+    }
+    zram_bvars["ram"] = mtv * 1024;
+
+    /* copy the builtin stuff */
+    zram_vars = zram_bvars;
+
+    /* reserve a bunch of slots in the arg stack */
+    sexp_argstack.reserve(64);
 
     char *line = nullptr;
     std::size_t len = 0;
