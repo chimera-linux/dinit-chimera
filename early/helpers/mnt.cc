@@ -325,7 +325,7 @@ static int do_mount_helper(
 static int do_mount_raw(
     char const *tgt, char const *src, char const *fstype,
     unsigned long flags, unsigned long iflags, std::string &eopts,
-    bool helper = false
+    bool helper = false, bool try_ro = false
 ) {
     unsigned long pflags = flags;
     unsigned long pmask = MS_SHARED | MS_PRIVATE | MS_SLAVE | MS_UNBINDABLE;
@@ -342,9 +342,16 @@ static int do_mount_raw(
         }
     }
     if (mount(src, tgt, fstype, flags, eopts.data()) < 0) {
-        int serrno = errno;
-        /* try a helper if regular mount fails */
-        int ret = do_mount_helper(tgt, src, fstype, iflags, eopts);
+        int serrno = errno, ret = -1;
+        /* try a helper if regular mount fails; or try mounting with ro
+         * when try_ro is set, that one never uses helpers as it's only
+         * for builtin filesystems like efivarfs
+         */
+        if (try_ro && !(flags & MS_RDONLY)) {
+            ret = mount(src, tgt, fstype, flags | MS_RDONLY, eopts.data());
+        } else if (!try_ro) {
+            ret = do_mount_helper(tgt, src, fstype, iflags, eopts);
+        }
         if (ret < 0) {
             errno = serrno;
             warn("failed to mount filesystem '%s'", tgt);
@@ -612,7 +619,8 @@ static int setup_src(
 }
 
 static int do_mount(
-    char const *tgt, char const *src, char const *fstype, char *opts
+    char const *tgt, char const *src, char const *fstype, char *opts,
+    bool try_ro = false
 ) {
     std::string asrc{};
     std::string eopts{};
@@ -622,7 +630,9 @@ static int do_mount(
     if (afd < 0) {
         return 1;
     }
-    auto ret = do_mount_raw(tgt, asrc.data(), fstype, flags, iflags, eopts);
+    auto ret = do_mount_raw(
+        tgt, asrc.data(), fstype, flags, iflags, eopts, false, try_ro
+    );
     /* close after mount is done so it does not autodestroy */
     if (afd > 0) {
         close(afd);
@@ -631,26 +641,45 @@ static int do_mount(
 }
 
 static int do_try(
-    char const *tgt, char const *src, char const *fstype, char *opts
+    char const *tgt, char const *src, char const *fstype, char *opts,
+    bool try_ro = false
 ) {
     /* already mounted */
     if (do_is(tgt) == 0) {
         return 0;
     }
-    return do_mount(tgt, src, fstype, opts);
+    return do_mount(tgt, src, fstype, opts, try_ro);
 }
 
-static int do_try_maybe(
-    char const *tgt, char const *src, char const *fstype, char *opts
+static int do_try_opt(
+    char const *tgt, char const *src, char const *fstype, char *opts,
+    bool try_ro = false
 ) {
     struct stat st;
     /* don't bother if we can't mount it there */
     if (stat(tgt, &st) || !S_ISDIR(st.st_mode)) {
         return 0;
     }
-    int ret = do_try(tgt, src, fstype, opts);
+    /* try getting opts from fstab if present before falling back */
+    struct mntent *mn = nullptr;
+    FILE *sf = setmntent("/etc/fstab", "r");
+    if (sf) {
+        while ((mn = getmntent(sf))) {
+            if (!strcmp(mn->mnt_dir, tgt)) {
+                opts = mn->mnt_opts;
+                break;
+            } else {
+                mn = nullptr;
+            }
+        }
+    }
+    int ret = do_try(tgt, src, fstype, opts, try_ro);
+    int serrno = errno;
+    if (sf) {
+        endmntent(sf);
+    }
     if (ret) {
-        switch (errno) {
+        switch (serrno) {
             case ENODEV:
             case ENOTSUP:
                 /* filesystem type not known or supported */
@@ -708,7 +737,6 @@ static int do_umount(char const *tgt, char *opts) {
 
 static int do_prepare(char *root_opts) {
     char procsys_opts[] = "nosuid,noexec,nodev";
-    char procsys_ropts[] = "nosuid,noexec,nodev,ro";
     char dev_opts[] = "mode=0755,nosuid";
     char shm_opts[] = "mode=1777,nosuid,nodev";
     /* first set umask to an unrestricted value */
@@ -784,15 +812,17 @@ static int do_prepare(char *root_opts) {
         return 1;
     }
     /* auxiliary pseudofs */
-    if (do_try_maybe("/sys/kernel/security", "securityfs", "securityfs", nullptr)) {
+    if (do_try_opt("/sys/kernel/security", "securityfs", "securityfs", nullptr)) {
         warn("could not mount /sys/kernel/security");
         return 1;
     }
-    if (do_try_maybe("/sys/firmware/efi/efivars", "efivarfs", "efivarfs", procsys_ropts)) {
+    if (do_try_opt(
+        "/sys/firmware/efi/efivars", "efivarfs", "efivarfs", procsys_opts, true
+    )) {
         warn("could not mount /sys/firmware/efi/efivars");
         return 1;
     }
-    if (do_try_maybe("/sys/fs/selinux", "selinuxfs", "selinuxfs", nullptr)) {
+    if (do_try_opt("/sys/fs/selinux", "selinuxfs", "selinuxfs", nullptr)) {
         warn("could not mount /sys/fs/selinux");
         return 1;
     }
