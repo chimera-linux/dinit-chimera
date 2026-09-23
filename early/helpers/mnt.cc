@@ -926,6 +926,7 @@ static struct option lopts[] = {
     {"to", required_argument, 0, 'm'},
     {"type", required_argument, 0, 't'},
     {"options", required_argument, 0, 'o'},
+    {"monitor", required_argument, 0, 'M'},
     {"ready", required_argument, 0, 'r'},
     {nullptr, 0, 0, 0}
 };
@@ -1003,7 +1004,7 @@ static int is_mounted(
             goto next;
         }
         *sp = '\0';
-        if (std::strcmp(buf, from)) {
+        if (from && std::strcmp(buf, from)) {
             /* unmatched source, so it's not this */
             goto next;
         }
@@ -1038,7 +1039,7 @@ static void sig_handler(int sign) {
 
 static int do_supervise(int argc, char **argv) {
     char *from = nullptr, *to = nullptr, *type = nullptr,
-         *options = nullptr, *ready = nullptr;
+         *options = nullptr, *monitor = nullptr, *ready = nullptr;
     for (;;) {
         int idx = 0;
         auto c = getopt_long(argc, argv, "", lopts, &idx);
@@ -1061,6 +1062,9 @@ static int do_supervise(int argc, char **argv) {
             case 'r':
                 ready = optarg;
                 break;
+            case 'M':
+                monitor = optarg;
+                break;
             case '?':
                 return 1;
             default:
@@ -1072,8 +1076,8 @@ static int do_supervise(int argc, char **argv) {
         warnx("supervise takes no positional arguments");
         return 1;
     }
-    if (!from || !to || !type) {
-        warnx("one of the following is missing: --from, --to, --type");
+    if ((!from || !to || !type) && !monitor) {
+        warnx("missing arguments: --monitor or one of --from, --to, --type");
         return 1;
     }
     /* determine the readiness fd if necessary */
@@ -1142,25 +1146,41 @@ static int do_supervise(int argc, char **argv) {
     std::vector<char> mdata{};
     unsigned long flags;
     unsigned long iflags;
-    auto afd = setup_src(from, options, flags, iflags, asrc, eopts);
+    auto afd = monitor ? 0 : setup_src(from, options, flags, iflags, asrc, eopts);
     if (afd < 0) {
         return 1;
+    }
+    if (monitor) {
+        from = nullptr;
+        to = monitor;
+    } else {
+        from = asrc.data();
     }
     /* reserve some sufficient buffer for mounts */
     mdata.reserve(8192);
     /* find if source is already mounted */
-    auto ism = is_mounted(mfd, asrc.data(), to, mdata);
+    auto ism = is_mounted(mfd, from, to, mdata);
     if (ism > 0) {
-        if (do_mount_raw(to, asrc.data(), type, flags, iflags, eopts)) {
+        if (monitor ? 0 : do_mount_raw(to, from, type, flags, iflags, eopts)) {
             return 1;
         }
         /* a successful mount means that mounts did change and we
          * should definitely receive at least one POLLPRI on the fd
+         *
+         * for monitor mode, just wait for it to appear at some point
          */
+        if (afd > 0) {
+            close(afd);
+        }
     } else if (ism < 0) {
         return 1;
     } else {
         /* monitor the existing mount */
+        if (ready_fd > 0) {
+            write(ready_fd, "READY=1\n", sizeof("READY=1"));
+            close(ready_fd);
+            ready_fd = -1;
+        }
     }
     for (;;) {
         auto pret = poll(pfd, 2, -1);
@@ -1178,8 +1198,8 @@ static int do_supervise(int argc, char **argv) {
                 return 1;
             }
             /* received a termination signal, so unmount and quit */
-            for (;;) {
-                ism = is_mounted(mfd, asrc.data(), to, mdata);
+            while (!monitor) {
+                ism = is_mounted(mfd, from, to, mdata);
                 if (ism < 0) {
                     return 1;
                 } else if (ism > 0) {
@@ -1194,8 +1214,11 @@ static int do_supervise(int argc, char **argv) {
             return 0;
         }
         if (pfd[1].revents & POLLPRI) {
-            ism = is_mounted(mfd, asrc.data(), to, mdata);
+            ism = is_mounted(mfd, from, to, mdata);
             if (ism > 0) {
+                if (monitor) {
+                    return 0;
+                }
                 /* mount disappeared, exit */
                 warnx("mount '%s' has vanished", to);
                 return 1;
@@ -1203,6 +1226,7 @@ static int do_supervise(int argc, char **argv) {
                 return 1;
             } else {
                 /* mount is ok... */
+                printf("READY\n");
                 if (ready_fd > 0) {
                     write(ready_fd, "READY=1\n", sizeof("READY=1"));
                     close(ready_fd);

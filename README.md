@@ -353,6 +353,21 @@ dependents) can be done either via the `pipefd` or `pipevar` mechanisms,
 with the argument to `--ready` determining that (number is for `pipefd`,
 while a name is for `pipevar`).
 
+It is also possible to do a pure monitor service. Such service will watch
+for a mount to appear (and signal readiness then) and will terminate when
+it disappears again, not unmounting anything.
+
+```
+type = process
+command = /usr/bin/dinit-mount-supervise \
+    --monitor /media/usb \
+    --ready MOUNT_READY
+restart = false
+ready-notification = pipevar:MOUNT_READY
+depends-on: device@PARTLABEL=usbstick
+depends-on: early-fs-local.target
+```
+
 ## Service targets
 
 The collection provides special "target" services, suffixed with `.target`,
