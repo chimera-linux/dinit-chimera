@@ -969,27 +969,55 @@ static char *unesc_mnt(char *beg) {
     return beg;
 }
 
+struct databuf {
+    databuf() {}
+    ~databuf() {
+        std::free(buf);
+    }
+
+    bool reserve(std::size_t n) {
+        void *newp = std::realloc(buf, n);
+        if (!newp) {
+            return false;
+        }
+        buf = static_cast<char *>(newp);
+        cap = n;
+        return true;
+    }
+
+    char *buf = nullptr;
+    std::size_t cap = 0;
+};
+
 static int is_mounted(
-    int mfd, char const *from, char const *to, std::vector<char> &data
+    int mfd, char const *from, char const *to, databuf &data,
+    bool first_time = false
 ) {
     auto off = lseek(mfd, 0, SEEK_SET);
     if (off < 0) {
         warn("failed to seek mounts");
         return -1;
     }
-    auto *buf = data.data();
-    auto cap = data.capacity();
-    auto rn = read(mfd, buf, cap);
+    auto rn = read(mfd, data.buf, data.cap);
     if (rn < 0) {
         warn("failed to read mounts");
         return -1;
     }
-    if (std::size_t(rn) == cap) {
+    if (std::size_t(rn) == data.cap) {
         /* double and try again from scratch to avoid races */
-        data.reserve(cap * 2);
+        if (!data.reserve(data.cap * 2)) {
+            warn("out of memory");
+            return -1;
+        }
         return is_mounted(mfd, from, to, data);
+    } else if (first_time && (data.cap - rn) < 2048) {
+        /* make sure we have some spare capacity for the future */
+        while ((data.cap - rn) < 2048) {
+            data.reserve(data.cap * 2);
+        }
     }
     /* terminate so we have a safe string */
+    auto *buf = data.buf;
     buf[rn] = '\0';
     /* now we have all the mounts; we can go over them line by line... */
     for (;;) {
@@ -1144,7 +1172,7 @@ static int do_supervise(int argc, char **argv) {
     /* prepare flags for mounting, figure out loopdev etc */
     std::string asrc{};
     std::string eopts{};
-    std::vector<char> mdata{};
+    databuf mdata{};
     unsigned long flags;
     unsigned long iflags;
     auto afd = monitor ? 0 : setup_src(from, options, flags, iflags, asrc, eopts);
@@ -1157,12 +1185,17 @@ static int do_supervise(int argc, char **argv) {
         from = asrc.data();
     }
     /* reserve some sufficient buffer for mounts */
-    mdata.reserve(8192);
+    if (!mdata.reserve(8192)) {
+        warn("out of memory");
+        return 1;
+    }
     /* find if source is already mounted; this also makes sure we have enough
      * space for mdata to avoid reallocating for future reads, which could
      * cause races again (a mount disappears inbetween to reads...
+     *
+     * also mark as first-time read so we reserve enough space for future reads
      */
-    auto ism = is_mounted(mfd, from, to, mdata);
+    auto ism = is_mounted(mfd, from, to, mdata, true);
     if (ism > 0) {
         if (monitor ? 0 : do_mount_raw(to, from, type, flags, iflags, eopts)) {
             return 1;
