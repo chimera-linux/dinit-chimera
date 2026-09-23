@@ -368,6 +368,9 @@ depends-on: device@PARTLABEL=usbstick
 depends-on: early-fs-local.target
 ```
 
+The `--from` argument can still be used for more accurate monitoring and
+will match the first column in `/proc/self/mounts` in that case.
+
 ## Service targets
 
 The collection provides special "target" services, suffixed with `.target`,

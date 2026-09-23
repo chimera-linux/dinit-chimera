@@ -1081,6 +1081,7 @@ static int do_supervise(int argc, char **argv) {
         return 1;
     }
     /* determine the readiness fd if necessary */
+    bool is_ready = false;
     int ready_fd = -1;
     if (ready) {
         char *endp = nullptr;
@@ -1151,14 +1152,16 @@ static int do_supervise(int argc, char **argv) {
         return 1;
     }
     if (monitor) {
-        from = nullptr;
         to = monitor;
     } else {
         from = asrc.data();
     }
     /* reserve some sufficient buffer for mounts */
     mdata.reserve(8192);
-    /* find if source is already mounted */
+    /* find if source is already mounted; this also makes sure we have enough
+     * space for mdata to avoid reallocating for future reads, which could
+     * cause races again (a mount disappears inbetween to reads...
+     */
     auto ism = is_mounted(mfd, from, to, mdata);
     if (ism > 0) {
         if (monitor ? 0 : do_mount_raw(to, from, type, flags, iflags, eopts)) {
@@ -1180,6 +1183,7 @@ static int do_supervise(int argc, char **argv) {
             write(ready_fd, "READY=1\n", sizeof("READY=1"));
             close(ready_fd);
             ready_fd = -1;
+            is_ready = true;
         }
     }
     for (;;) {
@@ -1216,6 +1220,10 @@ static int do_supervise(int argc, char **argv) {
         if (pfd[1].revents & POLLPRI) {
             ism = is_mounted(mfd, from, to, mdata);
             if (ism > 0) {
+                if (!is_ready) {
+                    /* the mount never appeared so far */
+                    continue;
+                }
                 if (monitor) {
                     return 0;
                 }
@@ -1226,12 +1234,12 @@ static int do_supervise(int argc, char **argv) {
                 return 1;
             } else {
                 /* mount is ok... */
-                printf("READY\n");
                 if (ready_fd > 0) {
                     write(ready_fd, "READY=1\n", sizeof("READY=1"));
                     close(ready_fd);
                     ready_fd = -1;
                 }
+                is_ready = true;
                 continue;
             }
         }
