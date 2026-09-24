@@ -1360,7 +1360,7 @@ static int do_supervise(int argc, char **argv) {
         if (mountcmd) {
             ret = exec_mountstr(mountcmd, from, to, options);
         } else {
-            ret = do_mount_raw(to, from, type, flags, iflags, eopts);
+            ret = do_mount_raw(to, from, type, flags, iflags, eopts, true);
         }
         if (ret) {
             /* TODO: maybe better return values */
