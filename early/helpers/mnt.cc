@@ -997,8 +997,7 @@ struct databuf {
 };
 
 static int is_mounted(
-    int mfd, char const *from, char const *to, databuf &data,
-    bool first_time = false
+    int mfd, char const *from, char const *to, databuf &data
 ) {
     auto off = lseek(mfd, 0, SEEK_SET);
     if (off < 0) {
@@ -1017,11 +1016,6 @@ static int is_mounted(
             return -1;
         }
         return is_mounted(mfd, from, to, data);
-    } else if (first_time && (data.cap - rn) < 2048) {
-        /* make sure we have some spare capacity for the future */
-        while ((data.cap - rn) < 2048) {
-            data.reserve(data.cap * 2);
-        }
     }
     /* terminate so we have a safe string */
     auto *buf = data.buf;
@@ -1276,51 +1270,55 @@ static int do_supervise(int argc, char **argv) {
         warn("out of memory");
         return 1;
     }
-    /* find if source is already mounted; this also makes sure we have enough
-     * space for mdata to avoid reallocating for future reads, which could
-     * cause races again (a mount disappears inbetween to reads...
-     *
-     * also mark as first-time read so we reserve enough space for future reads
+    /* try reading the entire mtab to ensure a sufficiently sized buffer,
+     * making sure we also have a spare capacity for growth
      */
-    auto ism = is_mounted(mfd, from, to, mdata, true);
-    if (ism > 0) {
-        if (!no_mount) {
-            int ret;
-            if (mountcmd) {
-                ret = exec_mountstr(mountcmd, from, to, options);
-            } else {
-                ret = do_mount_raw(to, from, type, flags, iflags, eopts);
-            }
-            if (ret) {
-                /* TODO: maybe better return values */
+    for (;;) {
+        auto moff = lseek(mfd, 0, SEEK_SET);
+        if (moff < 0) {
+            warn("failed to seek mounts");
+            return 1;
+        }
+        auto rn = read(mfd, mdata.buf, mdata.cap);
+        if (rn < 0) {
+            warn("failed to read mounts");
+            return 1;
+        }
+        /* make sure to have at least a bunch of extra buffer */
+        if ((mdata.cap - rn) < 2048) {
+            if (!mdata.reserve(mdata.cap * 2)) {
+                warn("out of memory");
                 return 1;
             }
+            /* try again */
+            continue;
         }
-        /* a successful mount means that mounts did change and we
-         * should definitely receive at least one POLLPRI on the fd
-         *
-         * for monitor mode, just wait for it to appear at some point
-         */
+    }
+    /* if we're tracking the mount as our own, just try mounting it outright
+     * and if it's already mounted it will fail; this is okay
+     *
+     * if we're monitoring, check if it's already mounted for readiness
+     * purposes, if not wait for it
+     */
+    if (!no_mount) {
+        int ret;
+        if (mountcmd) {
+            ret = exec_mountstr(mountcmd, from, to, options);
+        } else {
+            ret = do_mount_raw(to, from, type, flags, iflags, eopts);
+        }
+        if (ret) {
+            /* TODO: maybe better return values */
+            return 1;
+        }
         if (afd > 0) {
             close(afd);
         }
-    } else if (ism < 0) {
-        return 1;
     } else {
-        /* monitor the existing mount */
-        if (ready_fd > 0) {
-            write(ready_fd, "READY=1\n", sizeof("READY=1"));
-            close(ready_fd);
-            ready_fd = -1;
-        }
-        is_ready = true;
-        if (no_supervise) {
-            return 0;
-        }
+        goto check_mtab;
     }
     for (;;) {
-        auto pret = poll(pfd, 2, -1);
-        if (pret < 0) {
+        if (poll(pfd, 2, -1) < 0) {
             if (errno == EINTR) {
                 continue;
             }
@@ -1336,7 +1334,7 @@ static int do_supervise(int argc, char **argv) {
             /* received a termination signal, so unmount and quit */
             bool umount_failed = false;
             while (!no_umount) {
-                ism = is_mounted(mfd, from, to, mdata);
+                auto ism = is_mounted(mfd, from, to, mdata);
                 if (ism < 0) {
                     return 1;
                 } else if (ism > 0) {
@@ -1364,7 +1362,8 @@ static int do_supervise(int argc, char **argv) {
             return 0;
         }
         if (pfd[1].revents & POLLPRI) {
-            ism = is_mounted(mfd, from, to, mdata);
+check_mtab:
+            auto ism = is_mounted(mfd, from, to, mdata);
             if (ism > 0) {
                 if (!is_ready) {
                     /* the mount never appeared so far */
