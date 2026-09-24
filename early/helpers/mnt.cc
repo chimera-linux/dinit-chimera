@@ -43,6 +43,7 @@
 #include <getopt.h>
 #include <grp.h>
 #include <poll.h>
+#include <paths.h>
 #include <unistd.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
@@ -928,6 +929,8 @@ static struct option lopts[] = {
     {"to", required_argument, 0, 'm'},
     {"type", required_argument, 0, 't'},
     {"options", required_argument, 0, 'o'},
+    {"mount-command", required_argument, 0, 'M'},
+    {"umount-command", required_argument, 0, 'U'},
     {"no-mount", no_argument, 0, 'n'},
     {"no-umount", no_argument, 0, 'N'},
     {"no-supervise", no_argument, 0, 'e'},
@@ -1063,6 +1066,48 @@ next:
     return 1;
 }
 
+static int exec_mountstr(
+    char const *cmd, char const *src, char const *tgt, char const *opts
+) {
+    auto cpid = fork();
+    if (cpid < 0) {
+        warn("fork failed");
+        return -1;
+    }
+    if (cpid == 0) {
+        /* child, exec the command portably */
+        execl(
+            _PATH_BSHELL, _PATH_BSHELL, "-c", cmd,
+            _PATH_BSHELL, src ? src : "", tgt, opts, 0
+        );
+        abort();
+    }
+    int status;
+    while (waitpid(cpid, &status, 0) < 0) {
+        if (errno == EINTR) {
+            continue;
+        }
+        warn("waitpid failed");
+        return -1;
+    }
+    if (WIFEXITED(status)) {
+        int st = WEXITSTATUS(status);
+        if (st) {
+            warnx("command '%s' exited with status %d", st);
+        }
+        /* may be success */
+        return st;
+    } else if (WIFSIGNALED(status)) {
+        warnx("command '%s' killed by signal %d", WTERMSIG(status));
+        return 1;
+    } else if (WIFSTOPPED(status)) {
+        warnx("command '%s' stopped by signal %d", WSTOPSIG(status));
+        return 1;
+    }
+    warnx("command '%s' ended with unknown status");
+    return 1;
+}
+
 static int sigpipe[2];
 
 static void sig_handler(int sign) {
@@ -1071,7 +1116,8 @@ static void sig_handler(int sign) {
 
 static int do_supervise(int argc, char **argv) {
     char *from = nullptr, *to = nullptr, *type = nullptr,
-         *options = nullptr, *ready = nullptr;
+         *options = nullptr, *ready = nullptr,
+         *mountcmd = nullptr, *umountcmd = nullptr;
     bool no_mount = false, no_umount = false, no_supervise = false;
     for (;;) {
         int idx = 0;
@@ -1094,6 +1140,12 @@ static int do_supervise(int argc, char **argv) {
                 break;
             case 'r':
                 ready = optarg;
+                break;
+            case 'M':
+                mountcmd = optarg;
+                break;
+            case 'U':
+                umountcmd = optarg;
                 break;
             case 'n':
                 no_mount = true;
@@ -1119,12 +1171,24 @@ static int do_supervise(int argc, char **argv) {
         warnx("missing argument: --to");
         return 1;
     }
+    if (no_mount && (mountcmd || umountcmd)) {
+        warnx("(u)mount command cannot be used with --no-mount");
+        return 1;
+    }
+    if (no_umount && umountcmd) {
+        warnx("umount command cannot be used with --no-umount");
+        return 1;
+    }
     if (no_mount && no_supervise) {
         warnx("--no-mount and --no-supervise are mutually exclusive");
         return 1;
     }
-    if ((!from || !type) && !no_mount) {
-        warnx("missing arguments: --from/--type but --no-mount not specified");
+    if (!from && !no_mount) {
+        warnx("neither --from nor --no-mount was specified");
+        return 1;
+    }
+    if (!type && !no_mount && !mountcmd) {
+        warnx("--type not given but no --mount-command nor --no-mount");
         return 1;
     }
     /* no_mount implies no_umount as umounting without mounting makes no sense */
@@ -1200,7 +1264,7 @@ static int do_supervise(int argc, char **argv) {
     unsigned long flags;
     unsigned long iflags;
     int afd = 0;
-    if (!no_mount) {
+    if (!no_mount && !mountcmd) {
         afd = setup_src(from, options, flags, iflags, asrc, eopts);
         if (afd < 0) {
             return 1;
@@ -1220,8 +1284,17 @@ static int do_supervise(int argc, char **argv) {
      */
     auto ism = is_mounted(mfd, from, to, mdata, true);
     if (ism > 0) {
-        if (!no_mount && do_mount_raw(to, from, type, flags, iflags, eopts)) {
-            return 1;
+        if (!no_mount) {
+            int ret;
+            if (mountcmd) {
+                ret = exec_mountstr(mountcmd, from, to, options);
+            } else {
+                ret = do_mount_raw(to, from, type, flags, iflags, eopts);
+            }
+            if (ret) {
+                /* TODO: maybe better return values */
+                return 1;
+            }
         }
         /* a successful mount means that mounts did change and we
          * should definitely receive at least one POLLPRI on the fd
@@ -1268,8 +1341,17 @@ static int do_supervise(int argc, char **argv) {
                 } else if (ism > 0) {
                     return 0;
                 }
-                if (umount2(to, MNT_DETACH) < 0) {
-                    warn("umount failed");
+                int ret;
+                if (umountcmd) {
+                    ret = exec_mountstr(umountcmd, to, nullptr, nullptr);
+                } else {
+                    ret = umount2(to, MNT_DETACH);
+                    if (ret < 0) {
+                        warn("umount failed");
+                    }
+                }
+                if (ret) {
+                    /* TODO: maybe better return values */
                     return 1;
                 }
             }

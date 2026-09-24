@@ -321,7 +321,7 @@ filesystems on them.
 Once you have a configuration file, you can activate the device by enabling
 the `zram-device@zramN` service.
 
-## Mount services
+## Mount supervisor and services
 
 **Note this is experimental and subject to changes.**
 
@@ -384,7 +384,30 @@ option like:
 ```
 
 In this case, the process will exit (with an appropriate exit code) as soon
-as the mount has appeared or the procedure has failed.
+as the mount has appeared (or the procedure has failed).
+
+The helper can also use external commands for the mounting (and unmounting)
+specified with `--mount-command` and `--umount-command`. Both are specified
+as strings to be executed with the shell (`sh -c string`). The mount command
+receives the device as the first argument (`$1`) which may be an empty string
+if not provided, the mount point as the second argument (`$2`), and if any
+options were given, the option string as the third argument. The umount command
+receives the mount point as its sole argument. If mount command is given and
+umount command is not, the regular builtin logic is used.
+
+The mount/umount command strings are useful when you want to mount and
+supervise some mount point but the path is not mountable using standard
+tools, for instance things mountable without superuser privileges (for
+example, `sshfs`).
+
+Basic example that just uses `mount(8)`:
+
+```
+# dinit-mount-supervise --from /dev/sda1 --to /mnt --mount-command 'mount "$1" "$2"' --umount-command 'umount "$1"'
+```
+
+Note that readiness notification and so on are entirely independent of the
+commands and rely purely on polling the mount table.
 
 ## Service targets
 

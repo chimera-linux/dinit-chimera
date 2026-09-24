@@ -520,7 +520,7 @@ static int zram_format(char const *zdevn) {
     if (WIFEXITED(st)) {
         st = WEXITSTATUS(st);
         if (st) {
-            warnx("format comamnd '%s' exited with status %d", args[0]);
+            warnx("format command '%s' exited with status %d", args[0]);
         }
         return st;
     } else if (WIFSIGNALED(st)) {
