@@ -1185,11 +1185,17 @@ static int do_supervise(int argc, char **argv) {
         warnx("--type not given but no --mount-command nor --no-mount");
         return 1;
     }
-    /* no_mount implies no_umount as umounting without mounting makes no sense */
-    if (no_mount) {
+    /* no_mount implies no_umount as umounting without mounting makes no sense
+     * no_supervise means it should exit asap so it should not umount either
+     */
+    if (no_mount || no_supervise) {
         no_umount = true;
     }
-    /* determine the readiness fd if necessary */
+    /* determine the readiness fd if necessary; also signifies whether it is
+     * mounted, once it's mounted it stays that way for the entire run of the
+     * supervisor so we can use it for stuff (if mount disappers, the supervisor
+     * exits early)
+     */
     bool is_ready = false;
     int ready_fd = -1;
     if (ready) {
@@ -1293,6 +1299,7 @@ static int do_supervise(int argc, char **argv) {
             /* try again */
             continue;
         }
+        break;
     }
     /* if we're tracking the mount as our own, just try mounting it outright
      * and if it's already mounted it will fail; this is okay
@@ -1325,49 +1332,16 @@ static int do_supervise(int argc, char **argv) {
             warn("poll failed");
             return 1;
         }
-        if (pfd[0].revents & POLLIN) {
-            int sign;
-            if (read(pfd[0].fd, &sign, sizeof(sign)) != sizeof(sign)) {
-                warn("signal read failed");
-                return 1;
-            }
-            /* received a termination signal, so unmount and quit */
-            bool umount_failed = false;
-            while (!no_umount) {
-                auto ism = is_mounted(mfd, from, to, mdata);
-                if (ism < 0) {
-                    return 1;
-                } else if (ism > 0) {
-                    /* not mounted anymore */
-                    return 0;
-                } else if (umount_failed) {
-                    /* previously failed but still mounted */
-                    return 1;
-                }
-                int ret;
-                if (umountcmd) {
-                    ret = exec_mountstr(umountcmd, to, nullptr, nullptr);
-                } else {
-                    ret = umount2(to, MNT_DETACH);
-                    if (ret < 0) {
-                        warn("umount failed");
-                    }
-                }
-                if (ret) {
-                    umount_failed = true;
-                    /* check for mounted again */
-                }
-            }
-            // do unmount
-            return 0;
-        }
+        /* in case of mtab event check that first so we have up to date
+         * status for this specific loop, in case we also received term
+         */
         if (pfd[1].revents & POLLPRI) {
 check_mtab:
             auto ism = is_mounted(mfd, from, to, mdata);
             if (ism > 0) {
                 if (!is_ready) {
                     /* the mount never appeared so far */
-                    continue;
+                    goto handle_sig;
                 }
                 if (no_mount) {
                     return 0;
@@ -1388,8 +1362,44 @@ check_mtab:
                     return 0;
                 }
                 is_ready = true;
-                continue;
+                goto handle_sig;
             }
+        }
+handle_sig:
+        /* at this point any potential mtab change should have been handled
+         * so we should have up to date mount status for our target
+         */
+        if (pfd[0].revents & POLLIN) {
+            int sign;
+            if (read(pfd[0].fd, &sign, sizeof(sign)) != sizeof(sign)) {
+                warn("signal read failed");
+                return 1;
+            }
+            /* just exit, nothing to do here... */
+            if (no_umount || !is_ready) {
+                return 0;
+            }
+            /* try unmounting once */
+            int ret;
+            if (umountcmd) {
+                ret = exec_mountstr(umountcmd, to, nullptr, nullptr);
+            } else {
+                ret = umount2(to, MNT_DETACH);
+                if (ret < 0) {
+                    warn("umount failed");
+                }
+            }
+            /* on successful unmount, just go */
+            if (!ret) {
+                return 0;
+            }
+            /* last ditch effort: check if still mounted */
+            if (is_mounted(mfd, from, to, mdata) > 0) {
+                /* it went away on its own... */
+                return 0;
+            }
+            /* either failed to check or still there */
+            return 1;
         }
     }
     return 0;
