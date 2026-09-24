@@ -931,10 +931,11 @@ static struct option lopts[] = {
     {"options", required_argument, 0, 'o'},
     {"mount-command", required_argument, 0, 'M'},
     {"umount-command", required_argument, 0, 'U'},
+    {"ready", required_argument, 0, 'r'},
     {"no-mount", no_argument, 0, 'n'},
     {"no-umount", no_argument, 0, 'N'},
     {"no-supervise", no_argument, 0, 'e'},
-    {"ready", required_argument, 0, 'r'},
+    {"help", no_argument, 0, 'h'},
     {nullptr, 0, 0, 0}
 };
 
@@ -1108,6 +1109,48 @@ static void sig_handler(int sign) {
     write(sigpipe[1], &sign, sizeof(sign));
 }
 
+static void supervise_help(FILE *f) {
+    std::fprintf(f, "Usage: dinit-mount-supervise [OPTION...]\n"
+"Mount supervisor (and more).\n"
+"\n"
+"  -h, --help                display this message and quit\n"
+"  -s, --from SOURCE         the device to mount\n"
+"  -m, --to MOUNTPOINT       where to mount the device\n"
+"  -t, --type FSTYPE         the filesystem type\n"
+"  -o, --options OPTS        the mount options\n"
+"  -M, --mount-command CMD   custom mount command to use\n"
+"  -U, --umount-command CMD  custom umount command to use\n"
+"  -r, --ready FD            fd number or envvar name for readiness\n"
+"  -n, --no-mount            don't actually mount (only monitor)\n"
+"  -N, --no-umount           don't umount on termination\n"
+"  -e, --no-supervise        don't supervise, exit once mounted\n"
+"\n"
+"The default invocation involves --from, --to, and --type to mount and monitor\n"
+"a filesystem. The supervisor will unmount this filesystem when terminated,\n"
+"and will also exit (with unsuccessful code) if the mount disappears.\n"
+"The filesystem type is mandatory when using the builtin logic.\n"
+"\n"
+"When used with --no-mount, the filesystem type is not used, and the source\n"
+"device is optional (but will be used if provided). This will only monitor\n"
+"the mountpoint. If not mounted, it will wait first before signaling readiness.\n"
+"\n"
+"Specifying --no-mount implies --no-umount, but --no-umount can be used alone.\n"
+"\n"
+"Specifying --mount-command makes --type unused. Both mount and umount commands\n"
+"are strings executed with the shell. The mount command is passed the source\n"
+"device as the first argument (may be empty), the mount point as the second\n"
+"argument, and the options (if given) as the third argument. The umount command\n"
+"is passed the mount point. Both commands are optional and either can be used\n"
+"alone.\n"
+"\n"
+"Specifying --no-supervise implies --no-umount, and the process will only wait\n"
+"for the mount point to appear before exiting.\n"
+"\n"
+"Readiness notification follows the standard dinit style, and is optional.\n"
+"If given an integer, it is considered a file descriptor number, else it is\n"
+"considered an environment variable name and is read for the fd number.\n");
+}
+
 static int do_supervise(int argc, char **argv) {
     char *from = nullptr, *to = nullptr, *type = nullptr,
          *options = nullptr, *ready = nullptr,
@@ -1115,7 +1158,7 @@ static int do_supervise(int argc, char **argv) {
     bool no_mount = false, no_umount = false, no_supervise = false;
     for (;;) {
         int idx = 0;
-        auto c = getopt_long(argc, argv, "", lopts, &idx);
+        auto c = getopt_long(argc, argv, "s:m:t:o:M:U:r:nNeh", lopts, &idx);
         if (c == -1) {
             break;
         }
@@ -1150,10 +1193,15 @@ static int do_supervise(int argc, char **argv) {
             case 'e':
                 no_supervise = true;
                 break;
+            case 'h':
+                supervise_help(stdout);
+                return 0;
             case '?':
+                supervise_help(stderr);
                 return 1;
             default:
                 warnx("unknown argument '%c'", c);
+                supervise_help(stderr);
                 return 1;
         }
     }
