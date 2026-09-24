@@ -1,5 +1,12 @@
 fs = import('fs')
 
+cfg_data = configuration_data()
+
+cfg_data.set_quoted('MOUNT_PATH', mount_path)
+cfg_data.set_quoted('BLKID_PATH', blkid_path)
+
+cfg_file = configure_file(configuration: cfg_data, output: 'config.hh')
+
 helpers = [
     ['binfmt',    ['binfmt.cc'], [], []],
     ['devclient', ['devclient.cc'], [], []],

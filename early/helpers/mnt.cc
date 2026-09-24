@@ -35,6 +35,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <cctype>
 #include <vector>
 #include <mntent.h>
 #include <dirent.h>
@@ -50,6 +51,8 @@
 #include <sys/wait.h>
 #include <sys/utsname.h>
 #include <linux/loop.h>
+
+#include "config.hh"
 
 /* fallback; not accurate but good enough for early boot */
 static int mntpt_noproc(char const *inpath, struct stat *st) {
@@ -297,7 +300,7 @@ static int do_mount_helper(
     unsigned long flags, std::string const &eopts
 ) {
     char hname[256];
-    snprintf(hname, sizeof(hname), "/sbin/mount.%s", fstype);
+    snprintf(hname, sizeof(hname), MOUNT_PATH ".%s", fstype);
     if (access(hname, X_OK) < 0) {
         return -1;
     }
@@ -323,11 +326,104 @@ static int do_mount_helper(
     return 0;
 }
 
+static int do_blkid(char const *src, char *buf, std::size_t bufsz) {
+    int fds[2];
+    if (pipe2(fds, O_CLOEXEC) < 0) {
+        warn("blkid: pipe failed");
+        return -1;
+    }
+    auto cpid = fork();
+    if (cpid < 0) {
+        warn("blkid: fork failed");
+        return -1;
+    }
+    if (cpid == 0) {
+        close(STDIN_FILENO);
+        close(fds[0]);
+        /* the duped fds are not cloexec */
+        if (
+            (dup2(fds[1], STDOUT_FILENO) < 0) ||
+            (dup2(fds[1], STDERR_FILENO) < 0)
+        ) {
+            warn("blkid: dup2 failed");
+        }
+        execl(
+            BLKID_PATH,
+            BLKID_PATH, "-p", "-d", "-o", "value", "-s", "TYPE", src, 0
+        );
+        abort();
+    }
+    /* close our irrelevant end */
+    close(fds[1]);
+    /* in case we failed */
+    int ret = 0;
+    /* terminate */
+    memset(buf, 0, bufsz);
+    /* read whatever we can */
+    char *rbuf = buf;
+    auto remsz = bufsz - 1;
+    while (remsz) {
+        auto rsz = read(fds[0], rbuf, remsz);
+        if (rsz < 0) {
+            switch (errno) {
+                case EINTR:
+                case EAGAIN:
+                    /* repeat */
+                    continue;
+                default:
+                    if ((EAGAIN != EWOULDBLOCK) && (errno == EWOULDBLOCK)) {
+                        continue;
+                    }
+                    break;
+            }
+            warn("blkid: read failed");
+            close(fds[0]);
+            ret = -1;
+            break;
+        }
+        if (rsz == 0) {
+            /* eof, that's okay */
+            break;
+        }
+        /* trim trailing whitespace */
+        while (std::isspace(rbuf[rsz - 1])) {
+            rbuf[--rsz] = '\0';
+        }
+        rbuf += rsz;
+        remsz -= rsz;
+    }
+    int status;
+    while (waitpid(cpid, &status, 0) < 0) {
+        if (errno == EINTR) {
+            continue;
+        }
+        warn("waitpid failed");
+        return -1;
+    }
+    if (!WIFEXITED(status)) {
+        warn("blkid: failed to run");
+        return -1;
+    }
+    if (WIFEXITED(status)) {
+        int st = WEXITSTATUS(status);
+        if (st != 0) {
+            warn("blkid: failed with non-zero status (%d)", st);
+            return -1;
+        }
+    }
+    if ((ret < 0) || remsz >= (bufsz - 1)) {
+        warnx("blkid: no output received");
+        return -1;
+    }
+    return 0;
+}
+
 static int do_mount_raw(
     char const *tgt, char const *src, char const *fstype,
     unsigned long flags, unsigned long iflags, std::string &eopts,
     bool helper = false, bool try_ro = false
 ) {
+    char fstypebuf[128];
     unsigned long pflags = flags;
     unsigned long pmask = MS_SHARED | MS_PRIVATE | MS_SLAVE | MS_UNBINDABLE;
     /* propagation flags need to be set separately! */
@@ -342,8 +438,13 @@ static int do_mount_raw(
             return hret;
         }
     }
+    if (!fstype && !do_blkid(src, fstypebuf, sizeof(fstypebuf))) {
+        /* determined from blkid */
+        fstype = fstypebuf;
+    }
     if (!fstype) {
-        fstype = "";
+        warnx("%s: could not determine filesystem type", tgt);
+        return 1;
     }
 tryro:
     if (mount(src, tgt, fstype, flags, eopts.data()) < 0) {
@@ -351,7 +452,7 @@ tryro:
         switch (errno) {
             case EACCES:
             case EROFS:
-                if (!(flags & MS_RDONLY)) {
+                if (flags & MS_RDONLY) {
                     break;
                 }
                 warnx(
@@ -1157,7 +1258,7 @@ static void supervise_help(FILE *f) {
 "The default invocation involves --from, --to, and --type to mount and monitor\n"
 "a filesystem. The supervisor will unmount this filesystem when terminated,\n"
 "and will also exit (with unsuccessful code) if the mount disappears.\n"
-"The filesystem type is mandatory when using the builtin logic.\n"
+"The filesystem type is optional (blkid(8) will be used to determine it).\n"
 "\n"
 "When used with --no-mount, the filesystem type is not used, and the source\n"
 "device is optional (but will be used if provided). This will only monitor\n"

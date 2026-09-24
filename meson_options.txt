@@ -28,6 +28,18 @@ option('dinit-sulogin-path',
     description: 'path to sulogin (default: sbindir/sulogin)'
 )
 
+option('blkid-path',
+    type: 'string',
+    value: '',
+    description: 'path to blkid (default: sbindir/blkid)'
+)
+
+option('mount-path',
+    type: 'string',
+    value: '',
+    description: 'path to mount (default: sbindir/mount)'
+)
+
 option('default-path-env',
     type: 'string',
     value: '/sbin:/usr/sbin:/bin:/usr/bin',

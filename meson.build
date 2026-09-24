@@ -32,6 +32,9 @@ dinit_devd_path = get_option('dinit-devd-path')
 dinit_sulogin_path = get_option('dinit-sulogin-path')
 dinit_path = pfx / sbindir / 'dinit'
 
+blkid_path = get_option('blkid-path')
+mount_path = get_option('mount-path')
+
 if bless_boot_path == ''
     bless_boot_path = pfx / lexecdir / 'systemd-bless-boot'
 endif
@@ -50,6 +53,14 @@ endif
 
 if dinit_sulogin_path == ''
     dinit_sulogin_path = pfx / sbindir / 'sulogin'
+endif
+
+if blkid_path == ''
+    blkid_path = pfx / sbindir / 'blkid'
+endif
+
+if mount_path == ''
+    mount_path = pfx / sbindir / 'mount'
 endif
 
 subdir('early/helpers')
