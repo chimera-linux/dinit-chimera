@@ -926,7 +926,8 @@ static struct option lopts[] = {
     {"to", required_argument, 0, 'm'},
     {"type", required_argument, 0, 't'},
     {"options", required_argument, 0, 'o'},
-    {"monitor", required_argument, 0, 'M'},
+    {"no-mount", no_argument, 0, 'n'},
+    {"no-umount", no_argument, 0, 'N'},
     {"ready", required_argument, 0, 'r'},
     {nullptr, 0, 0, 0}
 };
@@ -1067,7 +1068,8 @@ static void sig_handler(int sign) {
 
 static int do_supervise(int argc, char **argv) {
     char *from = nullptr, *to = nullptr, *type = nullptr,
-         *options = nullptr, *monitor = nullptr, *ready = nullptr;
+         *options = nullptr, *ready = nullptr;
+    bool no_mount = false, no_umount = false;
     for (;;) {
         int idx = 0;
         auto c = getopt_long(argc, argv, "", lopts, &idx);
@@ -1090,8 +1092,11 @@ static int do_supervise(int argc, char **argv) {
             case 'r':
                 ready = optarg;
                 break;
-            case 'M':
-                monitor = optarg;
+            case 'n':
+                no_mount = true;
+                break;
+            case 'N':
+                no_umount = true;
                 break;
             case '?':
                 return 1;
@@ -1104,9 +1109,17 @@ static int do_supervise(int argc, char **argv) {
         warnx("supervise takes no positional arguments");
         return 1;
     }
-    if ((!from || !to || !type) && !monitor) {
-        warnx("missing arguments: --monitor or one of --from, --to, --type");
+    if (!to) {
+        warnx("missing argument: --to");
         return 1;
+    }
+    if ((!from || !type) && !no_mount) {
+        warnx("missing arguments: --from/--type but --no-mount not specified");
+        return 1;
+    }
+    /* no_mount implies no_umount as umounting without mounting makes no sense */
+    if (no_mount) {
+        no_umount = true;
     }
     /* determine the readiness fd if necessary */
     bool is_ready = false;
@@ -1175,13 +1188,12 @@ static int do_supervise(int argc, char **argv) {
     databuf mdata{};
     unsigned long flags;
     unsigned long iflags;
-    auto afd = monitor ? 0 : setup_src(from, options, flags, iflags, asrc, eopts);
-    if (afd < 0) {
-        return 1;
-    }
-    if (monitor) {
-        to = monitor;
-    } else {
+    int afd = 0;
+    if (!no_mount) {
+        afd = setup_src(from, options, flags, iflags, asrc, eopts);
+        if (afd < 0) {
+            return 1;
+        }
         from = asrc.data();
     }
     /* reserve some sufficient buffer for mounts */
@@ -1197,7 +1209,7 @@ static int do_supervise(int argc, char **argv) {
      */
     auto ism = is_mounted(mfd, from, to, mdata, true);
     if (ism > 0) {
-        if (monitor ? 0 : do_mount_raw(to, from, type, flags, iflags, eopts)) {
+        if (!no_mount && do_mount_raw(to, from, type, flags, iflags, eopts)) {
             return 1;
         }
         /* a successful mount means that mounts did change and we
@@ -1235,7 +1247,7 @@ static int do_supervise(int argc, char **argv) {
                 return 1;
             }
             /* received a termination signal, so unmount and quit */
-            while (!monitor) {
+            while (!no_umount) {
                 ism = is_mounted(mfd, from, to, mdata);
                 if (ism < 0) {
                     return 1;
@@ -1257,7 +1269,7 @@ static int do_supervise(int argc, char **argv) {
                     /* the mount never appeared so far */
                     continue;
                 }
-                if (monitor) {
+                if (no_mount) {
                     return 0;
                 }
                 /* mount disappeared, exit */

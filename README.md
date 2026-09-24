@@ -360,8 +360,9 @@ it disappears again, not unmounting anything.
 ```
 type = process
 command = /usr/bin/dinit-mount-supervise \
-    --monitor /media/usb \
-    --ready MOUNT_READY
+    --to /media/usb \
+    --ready MOUNT_READY \
+    --no-mount
 restart = false
 ready-notification = pipevar:MOUNT_READY
 depends-on: device@PARTLABEL=usbstick
@@ -369,7 +370,8 @@ depends-on: early-fs-local.target
 ```
 
 The `--from` argument can still be used for more accurate monitoring and
-will match the first column in `/proc/self/mounts` in that case.
+will match the first column in `/proc/self/mounts` in that case, but is
+not mandatory.
 
 ## Service targets
 
