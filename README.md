@@ -373,6 +373,19 @@ The `--from` argument can still be used for more accurate monitoring and
 will match the first column in `/proc/self/mounts` in that case, but is
 not mandatory.
 
+Additionally, `--no-umount` can be specified to avoid unmounting the volume
+upon exit (`--no-mount` implies it).
+
+It can also be used for general one-shot mounting with the `--no-supervise`
+option like:
+
+```
+# dinit-mount-supervise --no-supervise --from /dev/sda1 --to /mnt
+```
+
+In this case, the process will exit (with an appropriate exit code) as soon
+as the mount has appeared or the procedure has failed.
+
 ## Service targets
 
 The collection provides special "target" services, suffixed with `.target`,

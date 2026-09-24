@@ -928,6 +928,7 @@ static struct option lopts[] = {
     {"options", required_argument, 0, 'o'},
     {"no-mount", no_argument, 0, 'n'},
     {"no-umount", no_argument, 0, 'N'},
+    {"no-supervise", no_argument, 0, 'e'},
     {"ready", required_argument, 0, 'r'},
     {nullptr, 0, 0, 0}
 };
@@ -1069,7 +1070,7 @@ static void sig_handler(int sign) {
 static int do_supervise(int argc, char **argv) {
     char *from = nullptr, *to = nullptr, *type = nullptr,
          *options = nullptr, *ready = nullptr;
-    bool no_mount = false, no_umount = false;
+    bool no_mount = false, no_umount = false, no_supervise = false;
     for (;;) {
         int idx = 0;
         auto c = getopt_long(argc, argv, "", lopts, &idx);
@@ -1098,6 +1099,9 @@ static int do_supervise(int argc, char **argv) {
             case 'N':
                 no_umount = true;
                 break;
+            case 'e':
+                no_supervise = true;
+                break;
             case '?':
                 return 1;
             default:
@@ -1111,6 +1115,10 @@ static int do_supervise(int argc, char **argv) {
     }
     if (!to) {
         warnx("missing argument: --to");
+        return 1;
+    }
+    if (no_mount && no_supervise) {
+        warnx("--no-mount and --no-supervise are mutually exclusive");
         return 1;
     }
     if ((!from || !type) && !no_mount) {
@@ -1230,6 +1238,9 @@ static int do_supervise(int argc, char **argv) {
             ready_fd = -1;
             is_ready = true;
         }
+        if (no_supervise) {
+            return 0;
+        }
     }
     for (;;) {
         auto pret = poll(pfd, 2, -1);
@@ -1283,6 +1294,9 @@ static int do_supervise(int argc, char **argv) {
                     write(ready_fd, "READY=1\n", sizeof("READY=1"));
                     close(ready_fd);
                     ready_fd = -1;
+                }
+                if (no_supervise) {
+                    return 0;
                 }
                 is_ready = true;
                 continue;
