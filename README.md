@@ -380,7 +380,7 @@ It can also be used for general one-shot mounting with the `--no-supervise`
 option like:
 
 ```
-# dinit-mount-supervise --no-supervise --from /dev/sda1 --to /mnt
+# dinit-mount-supervise --no-supervise --from /dev/sda1 --to /mnt --type ext4
 ```
 
 In this case, the process will exit (with an appropriate exit code) as soon
