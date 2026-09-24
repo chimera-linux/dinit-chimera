@@ -342,6 +342,9 @@ static int do_mount_raw(
             return hret;
         }
     }
+    if (!fstype) {
+        fstype = "";
+    }
     if (mount(src, tgt, fstype, flags, eopts.data()) < 0) {
         int serrno = errno, ret = -1;
         /* try a helper if regular mount fails; or try mounting with ro
@@ -355,7 +358,17 @@ static int do_mount_raw(
         }
         if (ret < 0) {
             errno = serrno;
-            warn("failed to mount filesystem '%s'", tgt);
+            switch (errno) {
+                case ENODEV:
+                    if (*fstype) {
+                        warnx("unknown filesystem '%s'", fstype);
+                    } else {
+                        warnx("unknown filesystem");
+                    }
+                    break;
+                default:
+                    warn("failed to mount filesystem '%s'", tgt);
+            }
             return 1;
         }
         return ret;
@@ -1227,10 +1240,6 @@ static int do_supervise(int argc, char **argv) {
     }
     if (!from && !no_mount) {
         warnx("neither --from nor --no-mount was specified");
-        return 1;
-    }
-    if (!type && !no_mount && !mountcmd) {
-        warnx("--type not given but no --mount-command nor --no-mount");
         return 1;
     }
     /* no_mount implies no_umount as umounting without mounting makes no sense
