@@ -1312,8 +1312,8 @@ static int do_supervise(int argc, char **argv) {
             write(ready_fd, "READY=1\n", sizeof("READY=1"));
             close(ready_fd);
             ready_fd = -1;
-            is_ready = true;
         }
+        is_ready = true;
         if (no_supervise) {
             return 0;
         }
@@ -1334,12 +1334,17 @@ static int do_supervise(int argc, char **argv) {
                 return 1;
             }
             /* received a termination signal, so unmount and quit */
+            bool umount_failed = false;
             while (!no_umount) {
                 ism = is_mounted(mfd, from, to, mdata);
                 if (ism < 0) {
                     return 1;
                 } else if (ism > 0) {
+                    /* not mounted anymore */
                     return 0;
+                } else if (umount_failed) {
+                    /* previously failed but still mounted */
+                    return 1;
                 }
                 int ret;
                 if (umountcmd) {
@@ -1351,8 +1356,8 @@ static int do_supervise(int argc, char **argv) {
                     }
                 }
                 if (ret) {
-                    /* TODO: maybe better return values */
-                    return 1;
+                    umount_failed = true;
+                    /* check for mounted again */
                 }
             }
             // do unmount
