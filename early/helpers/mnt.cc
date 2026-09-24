@@ -543,9 +543,11 @@ static int setup_loop(
     bool configure = true;
     if (!eq || !eq[1]) {
         /* find unused loop device, or a preconfigured one */
-        lfd = open_loop(lmode, fst, offset, sizelimit, src, configure, flags);
+        lfd = open_loop(
+            lmode | O_CLOEXEC, fst, offset, sizelimit, src, configure, flags
+        );
     } else {
-        lfd = open(eq + 1, lmode);
+        lfd = open(eq + 1, lmode | O_CLOEXEC);
         if (loop_match(lfd, fst, offset, sizelimit, flags)) {
             configure = false;
         }
@@ -1163,6 +1165,7 @@ static int do_supervise(int argc, char **argv) {
             return 1;
         }
         /* we have a valid ready_fd now */
+        fcntl(ready_fd, F_SETFD, FD_CLOEXEC);
     }
     /* set up termination signals */
     struct sigaction sa{};
@@ -1174,7 +1177,7 @@ static int do_supervise(int argc, char **argv) {
     /* we will be polling 2 descriptors; sigpipe and mounts */
     pollfd pfd[2];
     /* set up a selfpipe for signals */
-    if (pipe(sigpipe) < 0) {
+    if (pipe2(sigpipe, O_CLOEXEC) < 0) {
         warn("pipe failed");
         return 1;
     }
@@ -1182,7 +1185,7 @@ static int do_supervise(int argc, char **argv) {
     pfd[0].events = POLLIN;
     pfd[0].revents = 0;
     /* set up mounts for polling... */
-    int mfd = open("/proc/self/mounts", O_RDONLY);
+    int mfd = open("/proc/self/mounts", O_RDONLY | O_CLOEXEC);
     if (mfd < 0) {
         warn("could not open mounts");
         return 1;
