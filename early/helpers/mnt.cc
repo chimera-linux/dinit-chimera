@@ -345,8 +345,24 @@ static int do_mount_raw(
     if (!fstype) {
         fstype = "";
     }
+tryro:
     if (mount(src, tgt, fstype, flags, eopts.data()) < 0) {
         int serrno = errno, ret = -1;
+        switch (errno) {
+            case EACCES:
+            case EROFS:
+                if (!(flags & MS_RDONLY)) {
+                    break;
+                }
+                warnx(
+                    "%s: filesystem is write-protected, mounting read-only",
+                    tgt
+                );
+                flags |= MS_RDONLY;
+                goto tryro;
+            default:
+                break;
+        }
         /* try a helper if regular mount fails; or try mounting with ro
          * when try_ro is set, that one never uses helpers as it's only
          * for builtin filesystems like efivarfs
