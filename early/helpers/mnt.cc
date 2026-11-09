@@ -54,71 +54,16 @@
 
 #include "config.hh"
 
-/* fallback; not accurate but good enough for early boot */
-static int mntpt_noproc(char const *inpath, struct stat *st) {
-    dev_t sdev;
-    ino_t sino;
-    char *path;
-    size_t slen;
-
-    sdev = st->st_dev;
-    sino = st->st_ino;
-
-    /* can't detect file bindmounts without proc */
-    if (!S_ISDIR(st->st_mode)) {
-        return 1;
-    }
-
-    slen = strlen(inpath);
-    path = static_cast<char *>(malloc(slen + 4));
-    if (!path) {
-        return 1;
-    }
-
-    snprintf(path, slen + 4, "%s/..", inpath);
-    if (stat(path, st)) {
-        return 1;
-    }
-
-    /* different device -> mount point
-     * same inode -> most likely root
-     */
-    free(path);
-    return (st->st_dev == sdev) && (st->st_ino != sino);
-}
-
 static int do_is(char const *mntpt) {
-    struct stat st;
-    FILE *sf;
-    struct mntent *mn;
-    char *path;
-    int retval = 1;
+    struct statx stx;
+    int sxflags = AT_NO_AUTOMOUNT | AT_SYMLINK_NOFOLLOW;
 
-    /* symbolic link or not given */
-    if (lstat(mntpt, &st) || S_ISLNK(st.st_mode)) {
+    /* fail or symlink */
+    if (statx(AT_FDCWD, mntpt, sxflags, STATX_TYPE, &stx) || S_ISLNK(stx.stx_mode)) {
         return 1;
     }
 
-    sf = setmntent("/proc/self/mounts", "r");
-    if (!sf) {
-        return mntpt_noproc(mntpt, &st);
-    }
-
-    path = realpath(mntpt, nullptr);
-    if (!path) {
-        return 1;
-    }
-
-    while ((mn = getmntent(sf))) {
-        if (!strcmp(mn->mnt_dir, path)) {
-            retval = 0;
-            break;
-        }
-    }
-
-    endmntent(sf);
-    free(path);
-    return retval;
+    return (stx.stx_attributes & STATX_ATTR_MOUNT_ROOT) == 0;
 }
 
 static constexpr unsigned long MS_TMASK = MS_BIND | MS_MOVE | MS_REMOUNT;
